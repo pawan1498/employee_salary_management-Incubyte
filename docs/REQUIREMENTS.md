@@ -16,7 +16,7 @@ This document is the product contract. Features not listed here are out of scope
 3. **Update salary** — Record a new current salary. Previous salary rows stay as history (append; do not silently overwrite).
 4. **Compensation insights** — Headcount; salary totals and averages **within a currency or country** (no FX conversion); breakdown **by country** and **by department**; a simple distribution (e.g. buckets) for the filtered set.
 5. **Seed data** — Script that creates **10,000** realistic employees across multiple countries and departments, each with a current salary (and enough history to demonstrate the feature).
-6. **Delivery** — Rails backend, relational DB, React or Next.js UI, meaningful tests, deployed app, video demo.
+6. **Delivery** — Rails backend, relational DB, **React (Vite) UI**, meaningful tests, deployed app, video demo.
 
 **Primary flow:** Insights (or home) → employee list (search/filter) → employee detail → update salary / view history.
 
