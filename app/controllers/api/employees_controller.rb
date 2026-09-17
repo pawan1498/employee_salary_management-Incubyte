@@ -9,6 +9,9 @@ class Api::EmployeesController < ApplicationController
     per_page = [ per_page, MAX_PER_PAGE ].min
 
     scope = Employee.order(:name, :id)
+                    .search(params[:q])
+                    .in_country(params[:country])
+                    .in_department(params[:department])
     employees = scope.offset((page - 1) * per_page).limit(per_page)
 
     render json: {

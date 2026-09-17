@@ -71,4 +71,77 @@ RSpec.describe "GET /api/employees", type: :request do
       )
     end
   end
+
+  context "when searching by name" do
+    it "returns only employees whose name matches the query" do
+      create_employee(name: "Grace Hopper", employee_number: "E-1001")
+      create_employee(name: "Alan Turing", employee_number: "E-1002")
+
+      get "/api/employees", params: { q: "Grace" }
+
+      expect(response).to have_http_status(:ok)
+      expect(json_body.fetch("data")).to contain_exactly(
+        hash_including("name" => "Grace Hopper", "employee_number" => "E-1001")
+      )
+      expect(json_body.fetch("meta")).to include("total" => 1)
+    end
+  end
+
+  context "when searching by employee number" do
+    it "returns only the employee with that number" do
+      create_employee(name: "Grace Hopper", employee_number: "E-1001")
+      create_employee(name: "Alan Turing", employee_number: "E-1002")
+
+      get "/api/employees", params: { q: "E-1002" }
+
+      expect(response).to have_http_status(:ok)
+      expect(json_body.fetch("data")).to contain_exactly(
+        hash_including("name" => "Alan Turing", "employee_number" => "E-1002")
+      )
+    end
+  end
+
+  context "when filtering by country" do
+    it "returns only employees in that country" do
+      create_employee(name: "Grace Hopper", country: "United States", employee_number: "E-1")
+      create_employee(name: "Ada Lovelace", country: "United Kingdom", employee_number: "E-2")
+
+      get "/api/employees", params: { country: "United Kingdom" }
+
+      expect(response).to have_http_status(:ok)
+      expect(json_body.fetch("data")).to contain_exactly(
+        hash_including("name" => "Ada Lovelace", "country" => "United Kingdom")
+      )
+      expect(json_body.fetch("meta")).to include("total" => 1)
+    end
+  end
+
+  context "when filtering by department" do
+    it "returns only employees in that department" do
+      create_employee(name: "Grace Hopper", department: "Engineering", employee_number: "E-1")
+      create_employee(name: "Mary HR", department: "People", employee_number: "E-2")
+
+      get "/api/employees", params: { department: "People" }
+
+      expect(response).to have_http_status(:ok)
+      expect(json_body.fetch("data")).to contain_exactly(
+        hash_including("name" => "Mary HR", "department" => "People")
+      )
+    end
+  end
+
+  context "when combining search and country" do
+    it "returns employees that match both" do
+      create_employee(name: "Ana India", country: "India", employee_number: "E-1")
+      create_employee(name: "Ana US", country: "United States", employee_number: "E-2")
+      create_employee(name: "Bina India", country: "India", employee_number: "E-3")
+
+      get "/api/employees", params: { q: "Ana", country: "India" }
+
+      expect(response).to have_http_status(:ok)
+      expect(json_body.fetch("data")).to contain_exactly(
+        hash_including("name" => "Ana India", "country" => "India")
+      )
+    end
+  end
 end
