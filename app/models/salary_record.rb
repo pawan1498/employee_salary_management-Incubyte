@@ -4,4 +4,6 @@ class SalaryRecord < ApplicationRecord
   validates :amount, numericality: { greater_than: 0 }
   validates :currency, presence: true
   validates :effective_date, presence: true
+
+  scope :newest_first, -> { order(effective_date: :desc, id: :desc) }
 end

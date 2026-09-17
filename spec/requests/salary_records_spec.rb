@@ -1,6 +1,10 @@
 require "rails_helper"
 
 RSpec.describe "Salary records API", type: :request do
+  def json_body
+    JSON.parse(response.body)
+  end
+
   let(:employee) do
     Employee.create!(
       employee_number: "E-1001",
@@ -27,6 +31,12 @@ RSpec.describe "Salary records API", type: :request do
 
       expect(response).to have_http_status(:created)
       expect(employee.salary_records.count).to eq(1)
+      created = json_body.fetch("data")
+      expect(BigDecimal(created.fetch("amount").to_s)).to eq(100_000)
+      expect(created).to include(
+        "currency" => "INR",
+        "effective_date" => "2026-01-15"
+      )
     end
 
     context "when amount is invalid" do
@@ -60,6 +70,7 @@ RSpec.describe "Salary records API", type: :request do
         post "/api/employees/0/salary_records", params: valid_params
 
         expect(response).to have_http_status(:not_found)
+        expect(json_body.fetch("errors")).to be_present
       end
     end
   end

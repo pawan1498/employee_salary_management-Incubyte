@@ -31,8 +31,8 @@ CORS must allow that origin on the Rails API before the SPA is wired.
 
 | Route | Purpose | API ready now? |
 |---|---|---|
-| `/employees` | Directory: `q`, country, department, page | **Yes** — `GET /api/employees` |
-| `/employees/:id` | Identity | **Partial** — show has identity only; current salary + history **not** on this payload yet |
+| `/employees` | Directory: `q`, country, department, page | **Yes** — `GET /api/employees` includes `current_salary` |
+| `/employees/:id` | Identity, current pay, history | **Yes** — `GET /api/employees/:id` |
 | `/employees/:id` form | Add salary | **Yes** — `POST /api/employees/:id/salary_records` with nested `salary_record` |
 | `/` insights | Headcount, totals by currency, by country/department | **No** — wait for `GET /api/insights` |
 
@@ -53,16 +53,47 @@ Query: `q`, `country`, `department`, `page`, `per_page` (default 25, max 100).
       "name": "Grace Hopper",
       "country": "United States",
       "department": "Engineering",
-      "role": "Rear Admiral"
+      "role": "Rear Admiral",
+      "current_salary": {
+        "id": 10,
+        "amount": "95000.0",
+        "currency": "USD",
+        "effective_date": "2026-01-15"
+      }
     }
   ],
   "meta": { "page": 1, "per_page": 25, "total": 10000 }
 }
 ```
 
-List does **not** yet include `current_salary`. Directory can show identity only until the backend adds it.
+`current_salary` is `null` when the employee has no salary records. List does not include full history.
 
-**Show** `GET /api/employees/:id` → `{ "data": { ...identity } }`. Missing id → **404**.
+**Show** `GET /api/employees/:id`
+
+```json
+{
+  "data": {
+    "id": 1,
+    "employee_number": "E-1001",
+    "name": "Grace Hopper",
+    "country": "United States",
+    "department": "Engineering",
+    "role": "Rear Admiral",
+    "current_salary": {
+      "id": 10,
+      "amount": "95000.0",
+      "currency": "USD",
+      "effective_date": "2026-01-15"
+    },
+    "salary_history": [
+      { "id": 10, "amount": "95000.0", "currency": "USD", "effective_date": "2026-01-15" },
+      { "id": 9, "amount": "80000.0", "currency": "USD", "effective_date": "2024-01-01" }
+    ]
+  }
+}
+```
+
+Missing id → **404** `{ "errors": ["Not found"] }`. Current salary is the latest `effective_date`, then latest `id`. History is newest first.
 
 **Create salary** `POST /api/employees/:id/salary_records`
 
@@ -102,7 +133,7 @@ Login, routing guards, FX conversion, mixing currencies into one “total pay”
 2. Employee list (search, filters, pagination)  
 3. Employee detail (identity)  
 4. Add-salary form (POST)  
-5. After backend adds `current_salary` / `salary_history` on show (and list): display them  
+5. Display `current_salary` / `salary_history` from list and show  
 6. Insights page after `GET /api/insights`
 
 ## Maintenance

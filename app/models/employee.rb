@@ -22,4 +22,20 @@ class Employee < ApplicationRecord
 
     where(department: department)
   end
+
+  def current_salary_record
+    if salary_records.loaded?
+      salary_records.max_by { |record| [ record.effective_date, record.id ] }
+    else
+      salary_records.newest_first.first
+    end
+  end
+
+  def salary_history
+    if salary_records.loaded?
+      salary_records.sort_by { |record| [ record.effective_date, record.id ] }.reverse
+    else
+      salary_records.newest_first.to_a
+    end
+  end
 end

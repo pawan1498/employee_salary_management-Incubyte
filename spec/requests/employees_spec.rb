@@ -59,6 +59,30 @@ RSpec.describe "GET /api/employees", type: :request do
       )
     end
 
+    it "includes the current salary for each employee" do
+      employee = create_employee(employee_number: "E-1001", name: "Grace Hopper")
+      employee.salary_records.create!(
+        amount: 80_000,
+        currency: "USD",
+        effective_date: Date.new(2024, 1, 1)
+      )
+      employee.salary_records.create!(
+        amount: 95_000,
+        currency: "USD",
+        effective_date: Date.new(2026, 1, 15)
+      )
+
+      get "/api/employees"
+
+      expect(response).to have_http_status(:ok)
+      current = json_body.fetch("data").first.fetch("current_salary")
+      expect(BigDecimal(current.fetch("amount").to_s)).to eq(95_000)
+      expect(current).to include(
+        "currency" => "USD",
+        "effective_date" => "2026-01-15"
+      )
+    end
+
     it "returns only the requested page and the full total" do
       create_employee(name: "Asha", employee_number: "E-1")
       create_employee(name: "Bina", employee_number: "E-2")
@@ -175,13 +199,70 @@ RSpec.describe "GET /api/employees/:id", type: :request do
         "role" => "Rear Admiral"
       )
     end
+
+    it "returns the current salary and history newest first" do
+      employee = create_employee(employee_number: "E-1001", name: "Grace Hopper")
+      employee.salary_records.create!(
+        amount: 80_000,
+        currency: "USD",
+        effective_date: Date.new(2024, 1, 1)
+      )
+      employee.salary_records.create!(
+        amount: 95_000,
+        currency: "USD",
+        effective_date: Date.new(2026, 1, 15)
+      )
+
+      get "/api/employees/#{employee.id}"
+
+      data = json_body.fetch("data")
+      current = data.fetch("current_salary")
+      expect(BigDecimal(current.fetch("amount").to_s)).to eq(95_000)
+      expect(current).to include("currency" => "USD", "effective_date" => "2026-01-15")
+
+      history = data.fetch("salary_history")
+      expect(history.map { |row| row.fetch("effective_date") }).to eq(%w[2026-01-15 2024-01-01])
+    end
+
+    it "uses the later record when two salaries share an effective date" do
+      employee = create_employee(employee_number: "E-1001")
+      employee.salary_records.create!(
+        amount: 50_000,
+        currency: "USD",
+        effective_date: Date.new(2026, 1, 15)
+      )
+      employee.salary_records.create!(
+        amount: 60_000,
+        currency: "USD",
+        effective_date: Date.new(2026, 1, 15)
+      )
+
+      get "/api/employees/#{employee.id}"
+
+      current = json_body.fetch("data").fetch("current_salary")
+      expect(BigDecimal(current.fetch("amount").to_s)).to eq(60_000)
+    end
+  end
+
+  context "when the employee has no salary records" do
+    it "returns a null current salary and an empty history" do
+      employee = create_employee
+
+      get "/api/employees/#{employee.id}"
+
+      expect(json_body.fetch("data")).to include(
+        "current_salary" => nil,
+        "salary_history" => []
+      )
+    end
   end
 
   context "when the employee does not exist" do
-    it "returns not found" do
+    it "returns not found with an errors list" do
       get "/api/employees/0"
 
       expect(response).to have_http_status(:not_found)
+      expect(json_body.fetch("errors")).to be_present
     end
   end
 end
