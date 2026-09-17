@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe "GET /api/employees", type: :request do
+module EmployeeRequestHelpers
   def json_body
     JSON.parse(response.body)
   end
@@ -16,6 +16,10 @@ RSpec.describe "GET /api/employees", type: :request do
       }.merge(attrs)
     )
   end
+end
+
+RSpec.describe "GET /api/employees", type: :request do
+  include EmployeeRequestHelpers
 
   context "when no employees exist" do
     it "returns an empty list and a total of zero" do
@@ -142,6 +146,42 @@ RSpec.describe "GET /api/employees", type: :request do
       expect(json_body.fetch("data")).to contain_exactly(
         hash_including("name" => "Ana India", "country" => "India")
       )
+    end
+  end
+end
+
+RSpec.describe "GET /api/employees/:id", type: :request do
+  include EmployeeRequestHelpers
+
+  context "when the employee exists" do
+    it "returns that employee's identity fields" do
+      employee = create_employee(
+        employee_number: "E-1001",
+        name: "Grace Hopper",
+        country: "United States",
+        department: "Engineering",
+        role: "Rear Admiral"
+      )
+
+      get "/api/employees/#{employee.id}"
+
+      expect(response).to have_http_status(:ok)
+      expect(json_body.fetch("data")).to include(
+        "id" => employee.id,
+        "employee_number" => "E-1001",
+        "name" => "Grace Hopper",
+        "country" => "United States",
+        "department" => "Engineering",
+        "role" => "Rear Admiral"
+      )
+    end
+  end
+
+  context "when the employee does not exist" do
+    it "returns not found" do
+      get "/api/employees/0"
+
+      expect(response).to have_http_status(:not_found)
     end
   end
 end

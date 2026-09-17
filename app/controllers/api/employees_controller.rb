@@ -20,6 +20,11 @@ class Api::EmployeesController < ApplicationController
     }
   end
 
+  def show
+    employee = Employee.find(params[:id])
+    render json: { data: employee_payload(employee) }
+  end
+
   private
 
   def employee_payload(employee)
