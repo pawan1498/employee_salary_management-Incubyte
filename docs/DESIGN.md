@@ -86,7 +86,7 @@ Each slice should be one or two commits (`test:` then `feat:`).
 
 ## Frontend
 
-Vite + React. Simple HR screens, not a design system exercise. One component library. Clear empty, loading, and error states. Pagination on the list. CORS open to the UI origin. No auth. Deploy the SPA as static files (or a static host) against the Rails API.
+Vite + React. See **[FRONTEND.md](FRONTEND.md)** for screens, env, and the JSON the SPA may call. Keep that file in sync with request specs.
 
 ## Performance (10k)
 
