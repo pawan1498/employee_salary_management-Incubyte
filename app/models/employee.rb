@@ -1,4 +1,6 @@
 class Employee < ApplicationRecord
+  has_many :salary_records, dependent: :restrict_with_exception
+
   validates :employee_number, :name, :country, :department, :role, presence: true
   validates :employee_number, uniqueness: true
 

@@ -26,6 +26,7 @@ RSpec.describe "Salary records API", type: :request do
       post "/api/employees/#{employee.id}/salary_records", params: valid_params
 
       expect(response).to have_http_status(:created)
+      expect(employee.salary_records.count).to eq(1)
     end
   end
 end
