@@ -27,6 +27,39 @@ Do not add employee delete, Excel import, or auth.
 
 The browser treats Vite (`localhost:5173`) and Rails (`localhost:3000`) as different sites. `curl` does not. `config/initializers/cors.rb` (`rack-cors`) allows local Vite origins and, in production, `CORS_ORIGINS`. Restart Rails after changing CORS.
 
+## Deploy on Render
+
+Two Render services:
+
+```text
+Static Site (React)  →  VITE_API_URL=https://<api>.onrender.com
+Web Service (Rails)  →  PostgreSQL + CORS_ORIGINS=https://<ui>.onrender.com
+```
+
+**API (already configured in repo)**
+
+- `render.yaml` — Blueprint for Postgres + web service
+- `bin/render-build.sh` — `bundle install` + `db:prepare` (no asset pipeline)
+- After first deploy: Render Shell → `bundle exec rails db:seed`
+
+**UI (when scaffolded)**
+
+| Setting | Value |
+|---|---|
+| Type | Static Site |
+| Root directory | `frontend` |
+| Build command | `npm install && npm run build` |
+| Publish directory | `dist` |
+| Env | `VITE_API_URL=https://<api>.onrender.com` |
+
+Add a SPA fallback (`public/_redirects` or equivalent) so `/employees/:id` serves `index.html`.
+
+**Flow after both are live**
+
+1. Set `CORS_ORIGINS` on the API to the Static Site URL.
+2. Redeploy the API.
+3. Smoke-test: Insights → employee list → detail → add salary.
+
 ## Screens
 
 | Route | Purpose | API ready now? |
