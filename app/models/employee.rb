@@ -8,7 +8,10 @@ class Employee < ApplicationRecord
     return all if query.blank?
 
     pattern = "%#{sanitize_sql_like(query.strip)}%"
-    where("name LIKE :pattern OR employee_number LIKE :pattern", pattern: pattern)
+    where(
+      "name LIKE :pattern OR employee_number LIKE :pattern OR role LIKE :pattern",
+      pattern: pattern
+    )
   end
 
   def self.in_country(country)
@@ -21,6 +24,12 @@ class Employee < ApplicationRecord
     return all if department.blank?
 
     where(department: department)
+  end
+
+  def self.in_role(role)
+    return all if role.blank?
+
+    where(role: role)
   end
 
   def current_salary_record

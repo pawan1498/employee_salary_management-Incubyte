@@ -5,19 +5,22 @@ RSpec.describe "GET /api/filters", type: :request do
     JSON.parse(response.body)
   end
 
-  it "returns static country and department options for search dropdowns" do
+  it "returns static country, department, and role options for search dropdowns" do
     get "/api/filters"
 
     expect(response).to have_http_status(:ok)
-    expect(json_body.fetch("data")).to eq(
-      "countries" => [
+    data = json_body.fetch("data")
+    expect(data.fetch("countries")).to eq(
+      [
         "United States",
         "United Kingdom",
         "India",
         "Germany",
         "Canada"
-      ],
-      "departments" => [
+      ]
+    )
+    expect(data.fetch("departments")).to eq(
+      [
         "Engineering",
         "People",
         "Finance",
@@ -25,5 +28,6 @@ RSpec.describe "GET /api/filters", type: :request do
         "Operations"
       ]
     )
+    expect(data.fetch("roles")).to include("Software Engineer", "Recruiter")
   end
 end

@@ -158,6 +158,34 @@ RSpec.describe "GET /api/employees", type: :request do
     end
   end
 
+  context "when searching by role" do
+    it "returns only employees whose role matches the query" do
+      create_employee(name: "Grace Hopper", role: "Software Engineer", employee_number: "E-1")
+      create_employee(name: "Mary HR", role: "Recruiter", employee_number: "E-2")
+
+      get "/api/employees", params: { q: "Recruiter" }
+
+      expect(response).to have_http_status(:ok)
+      expect(json_body.fetch("data")).to contain_exactly(
+        hash_including("name" => "Mary HR", "role" => "Recruiter")
+      )
+    end
+  end
+
+  context "when filtering by role" do
+    it "returns only employees with that role" do
+      create_employee(name: "Grace Hopper", role: "Software Engineer", employee_number: "E-1")
+      create_employee(name: "Alan Turing", role: "Backend Engineer", employee_number: "E-2")
+
+      get "/api/employees", params: { role: "Backend Engineer" }
+
+      expect(response).to have_http_status(:ok)
+      expect(json_body.fetch("data")).to contain_exactly(
+        hash_including("name" => "Alan Turing", "role" => "Backend Engineer")
+      )
+    end
+  end
+
   context "when combining search and country" do
     it "returns employees that match both" do
       create_employee(name: "Ana India", country: "India", employee_number: "E-1")

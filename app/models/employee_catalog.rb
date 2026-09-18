@@ -24,7 +24,11 @@ class EmployeeCatalog
     DEPARTMENTS.keys
   end
 
+  def self.roles
+    DEPARTMENTS.values.flatten.uniq.sort
+  end
+
   def self.filter_options
-    { countries: countries, departments: departments }
+    { countries: countries, departments: departments, roles: roles }
   end
 end

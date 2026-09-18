@@ -7,6 +7,7 @@ class Api::EmployeesController < ApplicationController
                     .search(params[:q])
                     .in_country(params[:country])
                     .in_department(params[:department])
+                    .in_role(params[:role])
     employees = scope.includes(:salary_records)
                      .offset((page - 1) * per_page)
                      .limit(per_page)

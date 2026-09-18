@@ -42,7 +42,7 @@ Do not start Insights UI until you can call the endpoint below. List + detail + 
 
 **Filter dropdowns** `GET /api/filters`
 
-Static country and department values for search dropdowns. Include an empty “All” option in the UI; send no query param when All is selected.
+Static country, department, and role values for search dropdowns. Include an empty “All” option in the UI; send no query param when All is selected.
 
 ```json
 {
@@ -60,16 +60,29 @@ Static country and department values for search dropdowns. Include an empty “A
       "Finance",
       "Sales",
       "Operations"
+    ],
+    "roles": [
+      "Account Executive",
+      "Accountant",
+      "Backend Engineer",
+      "Engineering Manager",
+      "Financial Analyst",
+      "HR Generalist",
+      "Office Manager",
+      "Operations Specialist",
+      "Recruiter",
+      "Sales Manager",
+      "Software Engineer"
     ]
   }
 }
 ```
 
-Use the returned strings as `country` and `department` query params on `GET /api/employees` and `GET /api/insights`.
+Use the returned strings as `country`, `department`, and `role` query params on `GET /api/employees`. Insights accepts `country` and `department` only.
 
 **List** `GET /api/employees`
 
-Query: `q`, `country`, `department`, `page`, `per_page` (default 25, max 100).
+Query: `q`, `country`, `department`, `role`, `page`, `per_page` (default 25, max 100). `q` matches name, employee number, or role (partial match).
 
 ```json
 {
