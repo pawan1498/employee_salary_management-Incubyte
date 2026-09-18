@@ -36,35 +36,34 @@ class EmployeeSeeder
 
   def insert_batch(indexes)
     now = Time.current
-    employee_rows = indexes.map { |index| employee_row(index, now) }
+    assignments = indexes.index_with { |index| random_assignment(index) }
+    employee_rows = indexes.map { |index| employee_row(index, assignments.fetch(index), now) }
     Employee.insert_all(employee_rows)
 
     ids_by_number = Employee.where(employee_number: employee_rows.map { |row| row[:employee_number] })
                             .pluck(:employee_number, :id)
                             .to_h
 
-    salary_rows = indexes.flat_map { |index| salary_rows_for(index, ids_by_number, now) }
+    salary_rows = indexes.flat_map do |index|
+      salary_rows_for(index, assignments.fetch(index), ids_by_number, now)
+    end
     SalaryRecord.insert_all(salary_rows)
   end
 
-  def employee_row(index, now)
-    location = EmployeeCatalog::LOCATIONS[index % EmployeeCatalog::LOCATIONS.size]
-    department = EmployeeCatalog.departments[index % EmployeeCatalog.departments.size]
-    role = EmployeeCatalog::DEPARTMENTS.fetch(department).sample(random: @random)
-
+  def employee_row(index, assignment, now)
     {
       employee_number: format("E-%05d", index),
       name: random_name(index),
-      country: location.fetch(:country),
-      department: department,
-      role: role,
+      country: assignment.fetch(:location).fetch(:country),
+      department: assignment.fetch(:department),
+      role: assignment.fetch(:role),
       created_at: now,
       updated_at: now
     }
   end
 
-  def salary_rows_for(index, ids_by_number, now)
-    location = EmployeeCatalog::LOCATIONS[index % EmployeeCatalog::LOCATIONS.size]
+  def salary_rows_for(index, assignment, ids_by_number, now)
+    location = assignment.fetch(:location)
     employee_id = ids_by_number.fetch(format("E-%05d", index))
     current_amount = amount_for(location)
 
@@ -74,6 +73,17 @@ class EmployeeSeeder
       rows.unshift(salary_row(employee_id, previous_amount, location.fetch(:currency), Date.new(2024, 1, 1), now))
     end
     rows
+  end
+
+  def random_assignment(index)
+    department = EmployeeCatalog.departments[(index + @random.rand(EmployeeCatalog.departments.size)) % EmployeeCatalog.departments.size]
+    location = EmployeeCatalog::LOCATIONS[(index * 13 + @random.rand(EmployeeCatalog::LOCATIONS.size)) % EmployeeCatalog::LOCATIONS.size]
+
+    {
+      location: location,
+      department: department,
+      role: EmployeeCatalog::DEPARTMENTS.fetch(department).sample(random: @random)
+    }
   end
 
   def salary_row(employee_id, amount, currency, effective_date, now)

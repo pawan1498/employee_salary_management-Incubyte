@@ -41,4 +41,11 @@ RSpec.describe EmployeeSeeder do
     names = Employee.pluck(:name)
     expect(names.uniq.size).to be >= 80
   end
+
+  it "spreads employees across countries and departments" do
+    EmployeeSeeder.new(count: 200, random: Random.new(42)).call
+
+    expect(Employee.distinct.pluck(:country).size).to be >= 4
+    expect(Employee.distinct.pluck(:department).size).to be >= 4
+  end
 end
