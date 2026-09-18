@@ -79,7 +79,7 @@ Outside-in: request spec first, then minimum implementation, then model spec onl
 3. Show employee + current salary
 4. Append-only salary update + invalid input
 5. Insights aggregations (SQL, not Ruby loops) — done: `GET /api/insights`
-6. Seed 10,000 employees
+6. Seed 10,000 employees — done: `bin/rails db:seed` (`EmployeeSeeder`)
 7. React: insights, list, detail + update form
 
 Each slice should be one or two commits (`test:` then `feat:`).
