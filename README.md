@@ -27,7 +27,7 @@ bin/rails db:seed
 
 ## Deploy on Render (PostgreSQL)
 
-This app is **API-only** — there is no asset pipeline. Render's default Rails build runs `assets:precompile`, which fails here. Use the custom build script instead.
+This app is **API-only** — there is no asset pipeline. Render's default Rails build runs `assets:precompile`; `lib/tasks/render.rake` no-ops those tasks and runs `db:prepare` instead. For a faster build, set **Build Command** to `./bin/render-build.sh`.
 
 ### Option A — Blueprint (recommended)
 
