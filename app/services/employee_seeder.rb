@@ -2,22 +2,6 @@ class EmployeeSeeder
   TARGET = 10_000
   BATCH_SIZE = 500
 
-  LOCATIONS = [
-    { country: "United States", currency: "USD", min: 55_000, max: 175_000 },
-    { country: "United Kingdom", currency: "GBP", min: 35_000, max: 120_000 },
-    { country: "India", currency: "INR", min: 600_000, max: 2_500_000 },
-    { country: "Germany", currency: "EUR", min: 40_000, max: 130_000 },
-    { country: "Canada", currency: "CAD", min: 50_000, max: 160_000 }
-  ].freeze
-
-  DEPARTMENTS = {
-    "Engineering" => [ "Software Engineer", "Backend Engineer", "Engineering Manager" ].freeze,
-    "People" => [ "HR Generalist", "Recruiter" ].freeze,
-    "Finance" => [ "Accountant", "Financial Analyst" ].freeze,
-    "Sales" => [ "Account Executive", "Sales Manager" ].freeze,
-    "Operations" => [ "Operations Specialist", "Office Manager" ].freeze
-  }.freeze
-
   FIRST_NAMES = %w[
     Ada Alan Grace Katherine Linus Margaret Satya Priya Omar Elena
     James Sofia Liam Noah Emma Olivia Ava Ethan Mason Aria Leo
@@ -64,9 +48,9 @@ class EmployeeSeeder
   end
 
   def employee_row(index, now)
-    location = LOCATIONS[index % LOCATIONS.size]
-    department = DEPARTMENTS.keys[index % DEPARTMENTS.size]
-    role = DEPARTMENTS.fetch(department).sample(random: @random)
+    location = EmployeeCatalog::LOCATIONS[index % EmployeeCatalog::LOCATIONS.size]
+    department = EmployeeCatalog.departments[index % EmployeeCatalog.departments.size]
+    role = EmployeeCatalog::DEPARTMENTS.fetch(department).sample(random: @random)
 
     {
       employee_number: format("E-%05d", index),
@@ -80,7 +64,7 @@ class EmployeeSeeder
   end
 
   def salary_rows_for(index, ids_by_number, now)
-    location = LOCATIONS[index % LOCATIONS.size]
+    location = EmployeeCatalog::LOCATIONS[index % EmployeeCatalog::LOCATIONS.size]
     employee_id = ids_by_number.fetch(format("E-%05d", index))
     current_amount = amount_for(location)
 

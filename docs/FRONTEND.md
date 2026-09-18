@@ -40,6 +40,33 @@ Do not start Insights UI until you can call the endpoint below. List + detail + 
 
 ## API the UI should call (as implemented)
 
+**Filter dropdowns** `GET /api/filters`
+
+Static country and department values for search dropdowns. Include an empty “All” option in the UI; send no query param when All is selected.
+
+```json
+{
+  "data": {
+    "countries": [
+      "United States",
+      "United Kingdom",
+      "India",
+      "Germany",
+      "Canada"
+    ],
+    "departments": [
+      "Engineering",
+      "People",
+      "Finance",
+      "Sales",
+      "Operations"
+    ]
+  }
+}
+```
+
+Use the returned strings as `country` and `department` query params on `GET /api/employees` and `GET /api/insights`.
+
 **List** `GET /api/employees`
 
 Query: `q`, `country`, `department`, `page`, `per_page` (default 25, max 100).
