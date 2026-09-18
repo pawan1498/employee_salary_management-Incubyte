@@ -25,7 +25,7 @@ Do not add employee delete, Excel import, or auth.
 - `fetch` or a thin `api.js` helper. No Redux unless the UI is painful without it
 - Env: `VITE_API_URL` (e.g. `http://localhost:3000`)
 
-CORS must allow that origin on the Rails API before the SPA is wired.
+The browser treats Vite (`localhost:5173`) and Rails (`localhost:3000`) as different sites. `curl` does not. `config/initializers/cors.rb` (`rack-cors`) allows local Vite origins and, in production, `CORS_ORIGINS`. Restart Rails after changing CORS.
 
 ## Screens
 
