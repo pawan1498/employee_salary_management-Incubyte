@@ -34,9 +34,9 @@ CORS must allow that origin on the Rails API before the SPA is wired.
 | `/employees` | Directory: `q`, country, department, page | **Yes** — `GET /api/employees` includes `current_salary` |
 | `/employees/:id` | Identity, current pay, history | **Yes** — `GET /api/employees/:id` |
 | `/employees/:id` form | Add salary | **Yes** — `POST /api/employees/:id/salary_records` with nested `salary_record` |
-| `/` insights | Headcount, totals by currency, by country/department | **No** — wait for `GET /api/insights` |
+| `/` insights | Headcount, totals by currency, by country/department | **Yes** — `GET /api/insights` |
 
-Do not start Insights UI until the insights endpoint exists. List + detail + salary form can start after list/show/POST are documented below.
+Do not start Insights UI until you can call the endpoint below. List + detail + salary form can start after list/show/POST are documented below.
 
 ## API the UI should call (as implemented)
 
@@ -114,6 +114,37 @@ Body (form or JSON):
 - `404` → employee missing
 
 Currency: 3-letter **uppercase** ISO (e.g. `USD`). Amount must be **> 0**. After success, reload show (or append locally only if the API later returns history).
+
+**Insights** `GET /api/insights`
+
+Query (optional, same as the directory): `country`, `department`.
+
+Uses each employee's **current** salary only. Never sums mixed currencies into one number. Money fields are decimal strings. Headcount is the employee count for the filter (people without a salary are counted there but omitted from money breakdowns).
+
+```json
+{
+  "data": {
+    "headcount": 3,
+    "by_currency": [
+      { "currency": "USD", "headcount": 2, "total": "150000.0", "average": "75000.0" }
+    ],
+    "by_country": [
+      { "country": "United States", "currency": "USD", "headcount": 2, "total": "150000.0", "average": "75000.0" }
+    ],
+    "by_department": [
+      { "department": "Engineering", "currency": "USD", "headcount": 2, "total": "150000.0", "average": "75000.0" }
+    ],
+    "distribution": [
+      { "currency": "USD", "bucket": "0-49999", "headcount": 1 },
+      { "currency": "USD", "bucket": "50000-99999", "headcount": 1 },
+      { "currency": "USD", "bucket": "100000-149999", "headcount": 1 },
+      { "currency": "USD", "bucket": "150000+", "headcount": 1 }
+    ]
+  }
+}
+```
+
+Amount buckets (native currency, not converted): `0-49999`, `50000-99999`, `100000-149999`, `150000+`.
 
 ## UX bar
 

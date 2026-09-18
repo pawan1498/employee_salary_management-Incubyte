@@ -78,7 +78,7 @@ Outside-in: request spec first, then minimum implementation, then model spec onl
 2. Search and country/department filters
 3. Show employee + current salary
 4. Append-only salary update + invalid input
-5. Insights aggregations (SQL, not Ruby loops)
+5. Insights aggregations (SQL, not Ruby loops) — done: `GET /api/insights`
 6. Seed 10,000 employees
 7. React: insights, list, detail + update form
 
