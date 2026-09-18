@@ -1,4 +1,6 @@
 class CompensationInsights
+  TABLE = CurrentSalaryRecordsQuery::TABLE
+
   def self.call(employees)
     new(employees).as_json
   end
@@ -21,7 +23,7 @@ class CompensationInsights
   private
 
   def currency_rows
-    grouped_totals("salary_records.currency").map do |row|
+    grouped_totals("#{TABLE}.currency").map do |row|
       money_row(
         currency: row.currency,
         headcount: row.employee_count,
@@ -32,7 +34,7 @@ class CompensationInsights
   end
 
   def country_rows
-    grouped_totals("employees.country", "salary_records.currency").map do |row|
+    grouped_totals("#{TABLE}.country", "#{TABLE}.currency").map do |row|
       money_row(
         country: row.country,
         currency: row.currency,
@@ -44,7 +46,7 @@ class CompensationInsights
   end
 
   def department_rows
-    grouped_totals("employees.department", "salary_records.currency").map do |row|
+    grouped_totals("#{TABLE}.department", "#{TABLE}.currency").map do |row|
       money_row(
         department: row.department,
         currency: row.currency,
@@ -57,10 +59,10 @@ class CompensationInsights
 
   def distribution_rows
     @current_salaries
-      .group("salary_records.currency", Arel.sql(amount_bucket_sql))
-      .order("salary_records.currency", Arel.sql(amount_bucket_sql))
+      .group("#{TABLE}.currency", Arel.sql(amount_bucket_sql))
+      .order("#{TABLE}.currency", Arel.sql(amount_bucket_sql))
       .select(
-        "salary_records.currency AS currency",
+        "#{TABLE}.currency AS currency",
         "#{amount_bucket_sql} AS bucket",
         "COUNT(*) AS employee_count"
       )
@@ -76,17 +78,17 @@ class CompensationInsights
       .select(
         *columns,
         "COUNT(*) AS employee_count",
-        "SUM(salary_records.amount) AS total_amount",
-        "AVG(salary_records.amount) AS average_amount"
+        "SUM(#{TABLE}.amount) AS total_amount",
+        "AVG(#{TABLE}.amount) AS average_amount"
       )
   end
 
   def amount_bucket_sql
     <<~SQL.squish
       CASE
-        WHEN salary_records.amount < 50000 THEN '0-49999'
-        WHEN salary_records.amount < 100000 THEN '50000-99999'
-        WHEN salary_records.amount < 150000 THEN '100000-149999'
+        WHEN #{TABLE}.amount < 50000 THEN '0-49999'
+        WHEN #{TABLE}.amount < 100000 THEN '50000-99999'
+        WHEN #{TABLE}.amount < 150000 THEN '100000-149999'
         ELSE '150000+'
       END
     SQL
