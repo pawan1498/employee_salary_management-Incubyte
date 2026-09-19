@@ -42,6 +42,15 @@ RSpec.describe SalaryRecord, type: :model do
     end
   end
 
+  context "when currency is not a supported salary currency" do
+    it "is invalid" do
+      record = SalaryRecord.new(valid_attributes.merge(currency: "JPY"))
+
+      expect(record).not_to be_valid
+      expect(record.errors[:currency]).to include("is not a supported salary currency")
+    end
+  end
+
   context "when effective date is missing" do
     it "is invalid" do
       record = SalaryRecord.new(valid_attributes.merge(effective_date: nil))
