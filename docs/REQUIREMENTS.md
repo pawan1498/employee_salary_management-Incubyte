@@ -18,8 +18,7 @@ Features not listed here are out of scope for **this submission** unless this fi
 | Topic | We chose | Why |
 |---|---|---|
 | **Salary history** | Append-only rows with `effective_date` | HR needs to see past pay changes, not only today’s number. Overwriting would lose audit trail. |
-| **Reports** | Headcount; org-wide total and average in a chosen **reporting currency**; breakdown by country and department; distribution buckets — all converted to that currency | HR needs one comparable view across countries, not separate currency silos. |
-| **Median salary** | Left out of this submission | Average plus distribution buckets already show typical pay; median adds SQL/UI cost with little extra HR value for the assignment. |
+| **Reports** | Headcount; org-wide total, average, and median in a chosen **reporting currency**; breakdown by country and department; distribution buckets — all converted to that currency | HR needs one comparable view across countries, not separate currency silos. Median shows typical pay without being skewed by outliers. |
 | **Currency** | Native currency on each salary record; insights converted via `base_currency` query param and cached **Frankfurter** (ECB) rates | Stateless API; React stores HR’s last choice in `localStorage`. Rates are indicative, not payroll truth. |
 | **Employee fields** | `employee_number`, name, country, department, role; salary on `salary_records` | Enough to find people, update pay, and report. **Joining date omitted** — useful for tenure later, not needed for the assignment flows. |
 | **Scope** | Salary management + reporting only | Payroll, tax, benefits, self-service, approval workflows, and auth are different products and would dominate the assessment. |
@@ -30,7 +29,7 @@ Features not listed here are out of scope for **this submission** unless this fi
 1. **Employee directory** — Paginated list of employees. Search by name or employee number. Filter by country and department (and role if present on the record).
 2. **Employee record** — View identity fields plus **current salary** (amount, currency, effective date).
 3. **Update salary** — Record a new current salary. Previous salary rows stay as history (append; do not silently overwrite).
-4. **Compensation insights** — Headcount; org-wide total and average in a **reporting currency** (`base_currency` param, default `USD`); breakdown **by country** and **by department** (converted); salary distribution buckets. **Median salary is out of scope.**
+4. **Compensation insights** — Headcount; org-wide total, average, and median in a **reporting currency** (`base_currency` param, default `USD`); breakdown **by country** and **by department** (converted); salary distribution buckets.
 5. **Seed data** — Script that creates **10,000** realistic employees across multiple countries and departments, each with a current salary (and enough history to demonstrate the feature).
 6. **Delivery** — Rails backend, relational DB, **React (Vite) UI**, meaningful tests, deployed app, video demo.
 **Primary flow:** Insights (or home) → employee list (search/filter) → employee detail → update salary / view history.
@@ -49,7 +48,6 @@ Features not listed here are out of scope for **this submission** unless this fi
 | Login / SSO / roles | Assessment is a single HR-manager tool. Auth is not required and would dominate time without proving the salary problem. Treat as an internal app. |
 | Payroll, tax, benefits, attendance, leave, recruitment, performance, self-service | Different products. Would explode scope. |
 | Real-time payroll-grade FX | Insights use cached daily ECB rates (Frankfurter). Fine for management reporting; not for payroll or tax. |
-| Median salary | Average + distribution buckets cover “typical pay” for v1; median adds query/UI cost with little extra insight for HR. |
 | Joining date | Useful for tenure analytics; not required for directory, salary update, or the insights above. |
 | Bulk Excel import, email, approval workflows | Nice for Excel migration; not needed to prove manage + insights. |
 | Delete employee, retroactive payroll recalculation | HR can stop using a record later; we keep history simple. |

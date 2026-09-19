@@ -39,6 +39,7 @@ RSpec.describe "GET /api/insights", type: :request do
       expect(data.fetch("headcount")).to eq(0)
       expect(data.fetch("total")).to eq("0.00")
       expect(data.fetch("average")).to eq("0.00")
+      expect(data.fetch("median")).to eq("0.00")
       expect(data.fetch("by_country")).to eq([])
       expect(data.fetch("by_department")).to eq([])
       expect(data.fetch("distribution")).to eq([])
@@ -67,6 +68,18 @@ RSpec.describe "GET /api/insights", type: :request do
       expect(data.fetch("headcount")).to eq(3)
       expect(BigDecimal(data.fetch("total"))).to eq(151_000)
       expect(BigDecimal(data.fetch("average"))).to eq(50_333.33)
+      expect(BigDecimal(data.fetch("median"))).to eq(50_000)
+    end
+  end
+
+  context "when two employees have salaries" do
+    it "returns the average of the two middle values as the median" do
+      create_employee_with_salary({}, { amount: 100_000, currency: "USD" })
+      create_employee_with_salary({}, { amount: 50_000, currency: "USD" })
+
+      get "/api/insights"
+
+      expect(BigDecimal(json_body.fetch("data").fetch("median"))).to eq(75_000)
     end
   end
 

@@ -30,7 +30,7 @@ class CompensationInsights
   end
 
   def as_json(*)
-    total_amount, average_amount = org_stats
+    total_amount, average_amount, median_amount = org_stats
 
     {
       base_currency: @base_currency,
@@ -38,6 +38,7 @@ class CompensationInsights
       headcount: @employees.count,
       total: format_money(total_amount),
       average: format_money(average_amount),
+      median: format_money(median_amount),
       by_country: country_rows,
       by_department: department_rows,
       distribution: distribution_rows
@@ -47,9 +48,28 @@ class CompensationInsights
   private
 
   def org_stats
-    salaries_with_rates
-      .unscope(:select)
-      .pick(Arel.sql(SUM_CONVERTED_SQL), Arel.sql(AVG_CONVERTED_SQL))
+    relation = salaries_with_rates.unscope(:select)
+    total_amount, average_amount = relation.pick(
+      Arel.sql(SUM_CONVERTED_SQL),
+      Arel.sql(AVG_CONVERTED_SQL)
+    )
+    [ total_amount, average_amount, median_amount_for(relation) ]
+  end
+
+  def median_amount_for(relation)
+    amounts_sql = relation.select(Arel.sql("#{CONVERTED_AMOUNT_SQL} AS converted_amount")).to_sql
+    median_sql = <<~SQL.squish
+      SELECT AVG(converted_amount)
+      FROM (
+        SELECT converted_amount,
+               ROW_NUMBER() OVER (ORDER BY converted_amount) AS row_num,
+               COUNT(*) OVER () AS total_count
+        FROM (#{amounts_sql}) AS converted_amounts
+      )
+      WHERE row_num IN ((total_count + 1) / 2, (total_count + 2) / 2)
+    SQL
+
+    SalaryRecord.connection.select_value(median_sql)
   end
 
   def country_rows

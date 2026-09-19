@@ -166,15 +166,14 @@ Used on **Insights**, **Employees**, and **Employee detail**. Same `localStorage
 
 1. Load filters → searchable reporting currency picker from `currencies` (shared with employee pages).
 2. `GET /api/insights?base_currency=…&country=&department=` (omit empty filter params).
-3. Render stat cards (headcount, total, average), `rates_as_of` note, tabbed breakdowns:
+3. Render stat cards (headcount, total, average, median), `rates_as_of` note, tabbed breakdowns:
    - **By country** — headcount pie chart + table (total/average per country)
    - **By department** — headcount pie chart + table
    - **Salary ranges** — stacked bar chart + table (`distribution` buckets)
-4. **Median salary** is intentionally not shown (see REQUIREMENTS.md); average + distribution cover typical pay for this submission.
-5. Country/department filters reuse the same filter bar pattern as employees.
-6. Currency change → save to `localStorage` (`base_currency` key), refetch insights.
-7. On `503` (FX unavailable) → error state with retry. On `422` (bad currency) → show API errors.
-8. Do **not** convert amounts in the browser — the API owns FX math.
+4. Country/department filters reuse the same filter bar pattern as employees.
+5. Currency change → save to `localStorage` (`base_currency` key), refetch insights.
+6. On `503` (FX unavailable) → error state with retry. On `422` (bad currency) → show API errors.
+7. Do **not** convert amounts in the browser — the API owns FX math.
 
 ## API the UI should call (as implemented)
 
@@ -359,6 +358,7 @@ Money fields are decimal strings with two fractional digits. Headcount is the em
     "headcount": 3,
     "total": "151000.00",
     "average": "50333.33",
+    "median": "50000.00",
     "by_country": [
       { "country": "United States", "headcount": 2, "total": "150000.00", "average": "75000.00" },
       { "country": "India", "headcount": 1, "total": "1000.00", "average": "1000.00" }

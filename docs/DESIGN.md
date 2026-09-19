@@ -76,7 +76,7 @@ Prefix: `/api`. JSON.
 | GET | `/api/employees/:id` | Identity + current salary + salary history (newest first). |
 | POST | `/api/employees/:id/salary_records` | Append a salary. Body: `amount`, `currency`, `effective_date`. |
 | GET | `/api/filters` | Countries, departments, roles, `currencies`, and `default_base_currency`. |
-| GET | `/api/insights` | Headcount; org-wide total/average in `base_currency` (default USD); breakdown by country and department (converted); distribution buckets. |
+| GET | `/api/insights` | Headcount; org-wide total/average/median in `base_currency` (default USD); breakdown by country and department (converted); distribution buckets. |
 
 Errors: 404 missing employee; 422 validation; 503 when exchange rates unavailable and cache is empty. Lists: `{ data, meta: { page, per_page, total } }`.
 

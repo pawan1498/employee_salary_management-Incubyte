@@ -122,7 +122,7 @@ All routes are under `/api`. Responses are JSON.
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/up` | Health check |
-| `GET` | `/api/insights` | Headcount, org total/average in `base_currency` (default USD), breakdowns |
+| `GET` | `/api/insights` | Headcount, org total/average/median in `base_currency` (default USD), breakdowns |
 | `GET` | `/api/employees` | Paginated list (`q`, `country`, `department`, `role`, `page`, `per_page`) |
 | `GET` | `/api/employees/:id` | Employee + current salary + history |
 | `POST` | `/api/employees/:id/salary_records` | Append a new salary record |
