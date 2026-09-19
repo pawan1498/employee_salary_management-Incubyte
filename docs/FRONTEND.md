@@ -27,6 +27,49 @@ Do not add employee delete, Excel import, or auth.
 
 The browser treats Vite (`localhost:5173`) and Rails (`localhost:3000`) as different sites. `curl` does not. `config/initializers/cors.rb` (`rack-cors`) allows local Vite origins and, in production, `CORS_ORIGINS`. Restart Rails after changing CORS.
 
+## Deploy on Render
+
+**Live URLs**
+
+| Service | URL |
+|---|---|
+| React UI | https://employee-salary-management-frontend-sdqh.onrender.com |
+| Rails API | https://employee-salary-management-incubyte.onrender.com |
+
+```text
+Static Site (React)  →  VITE_API_URL=https://employee-salary-management-incubyte.onrender.com
+Web Service (Rails)  →  CORS_ORIGINS=https://employee-salary-management-frontend-sdqh.onrender.com
+```
+
+To keep local dev working too, comma-separate both origins on the API:
+
+```text
+CORS_ORIGINS=http://localhost:5173,https://employee-salary-management-frontend-sdqh.onrender.com
+```
+
+**API (repo scripts; env vars live in Render dashboard)**
+
+- `bin/render-build.sh` — `bundle install`
+- `bin/render-start.sh` — `db:prepare`, idempotent `db:seed`, Puma
+
+**UI (when scaffolded)**
+
+| Setting | Value |
+|---|---|
+| Type | Static Site |
+| Root directory | `frontend` |
+| Build command | `npm install && npm run build` |
+| Publish directory | `dist` |
+| Env | `VITE_API_URL=https://<api>.onrender.com` |
+
+Add a SPA fallback (`public/_redirects` or equivalent) so `/employees/:id` serves `index.html`.
+
+**Flow after both are live**
+
+1. Set `CORS_ORIGINS` on the API to the Static Site URL.
+2. Redeploy the API.
+3. Smoke-test: Insights → employee list → detail → add salary.
+
 ## Screens
 
 | Route | Purpose | API ready now? |
