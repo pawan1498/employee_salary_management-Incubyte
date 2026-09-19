@@ -211,3 +211,5 @@ Set build/start commands and env vars in the **Render dashboard** — they are n
 | [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) | Product scope and decisions |
 | [docs/DESIGN.md](docs/DESIGN.md) | Architecture and data model |
 | [docs/FRONTEND.md](docs/FRONTEND.md) | React app flows and JSON contract |
+| [docs/AI_WORKFLOW.md](docs/AI_WORKFLOW.md) | How Cursor/AI was used; human vs agent ownership |
+| [docs/TRADE_OFFS.md](docs/TRADE_OFFS.md) | Key design decisions and what was left out |
