@@ -7,9 +7,9 @@ class Employee < ApplicationRecord
   def self.search(query)
     return all if query.blank?
 
-    pattern = "%#{sanitize_sql_like(query.strip)}%"
+    pattern = "%#{sanitize_sql_like(query.strip.downcase)}%"
     where(
-      "name LIKE :pattern OR employee_number LIKE :pattern OR role LIKE :pattern",
+      "LOWER(name) LIKE :pattern OR LOWER(employee_number) LIKE :pattern OR LOWER(role) LIKE :pattern",
       pattern: pattern
     )
   end

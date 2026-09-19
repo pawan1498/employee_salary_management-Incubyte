@@ -113,6 +113,18 @@ RSpec.describe "GET /api/employees", type: :request do
       )
       expect(json_body.fetch("meta")).to include("total" => 1)
     end
+
+    it "matches names regardless of letter case" do
+      create_employee(name: "Priya Sharma", employee_number: "E-1001")
+      create_employee(name: "Alan Turing", employee_number: "E-1002")
+
+      get "/api/employees", params: { q: "priya" }
+
+      expect(response).to have_http_status(:ok)
+      expect(json_body.fetch("data")).to contain_exactly(
+        hash_including("name" => "Priya Sharma", "employee_number" => "E-1001")
+      )
+    end
   end
 
   context "when searching by employee number" do

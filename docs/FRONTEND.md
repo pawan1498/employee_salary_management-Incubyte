@@ -261,7 +261,7 @@ Conversion on employee pages: `reporting_amount = native_amount / rates[native_c
 
 ### List — `GET /api/employees`
 
-Query: `q`, `country`, `department`, `role`, `page`, `per_page` (default 25, max 100). `q` matches name, employee number, or role (partial match).
+Query: `q`, `country`, `department`, `role`, `page`, `per_page` (default 25, max 100). `q` matches name, employee number, or role (partial match, **case-insensitive** — `priya` and `Priya` return the same results).
 
 ```json
 {

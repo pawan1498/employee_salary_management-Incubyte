@@ -11,6 +11,28 @@ RSpec.describe Employee, type: :model do
     )
   end
 
+  describe ".search" do
+    it "matches names regardless of letter case" do
+      employee = Employee.create!(
+        employee_number: "E-1001",
+        name: "Priya Sharma",
+        country: "India",
+        department: "Engineering",
+        role: "Software Engineer"
+      )
+      Employee.create!(
+        employee_number: "E-1002",
+        name: "Alan Turing",
+        country: "United Kingdom",
+        department: "Engineering",
+        role: "Software Engineer"
+      )
+
+      expect(Employee.search("priya")).to contain_exactly(employee)
+      expect(Employee.search("PRIYA")).to contain_exactly(employee)
+    end
+  end
+
   describe "#current_salary_record" do
     it "returns the salary with the latest effective date" do
       employee = create_employee
