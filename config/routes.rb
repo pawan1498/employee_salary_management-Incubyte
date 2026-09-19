@@ -8,6 +8,7 @@ Rails.application.routes.draw do
 
   namespace :api do
     resource :filters, only: [ :show ]
+    resource :exchange_rates, only: [ :show ]
     resource :insights, only: [ :show ]
     resources :employees, only: [ :index, :show ] do
       resources :salary_records, only: [ :create ]

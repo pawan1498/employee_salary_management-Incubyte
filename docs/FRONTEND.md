@@ -133,20 +133,30 @@ Nav: **Insights** (home) and **Employees** in the app bar (`Layout.tsx`).
 2. While loading → show loading state; on failure → error state (page cannot render dropdowns).
 3. Dropdowns include an empty **All** option; omit the query param when All is selected (`api.ts` skips empty strings).
 
+### Shared: reporting currency picker
+
+Used on **Insights**, **Employees**, and **Employee detail**. Same `localStorage` key (`base_currency`) everywhere.
+
+1. Resolve initial value from `localStorage` or `default_base_currency` in filters.
+2. Render a **searchable** reporting currency control (`ReportingCurrencySelect` — MUI Autocomplete).
+3. On change → save to `localStorage` and refetch page data that depends on currency.
+
 ### Employees (`/employees`)
 
-1. Load filters → render search box + country/department/role dropdowns.
-2. Search input is debounced (300 ms) before setting `q` and resetting to page 1.
-3. `GET /api/employees?q=&country=&department=&role=&page=1&per_page=25`.
-4. Table shows employee number, name, country, department, role, current salary (or “—”).
-5. Row links to `/employees/:id`. Pagination uses `meta.page`, `meta.per_page`, `meta.total`.
-6. Active filters shown as chips with clear actions.
+1. Load filters → render reporting currency picker + search box + country/department/role dropdowns.
+2. `GET /api/exchange_rates?base_currency=…` for indicative per-row conversion.
+3. Search input is debounced (300 ms) before setting `q` and resetting to page 1.
+4. `GET /api/employees?q=&country=&department=&role=&page=1&per_page=25`.
+5. Table shows employee number, name, country, department, role, and **current salary in native currency plus an approximate equivalent in the selected reporting currency**.
+6. Row links to `/employees/:id`. Pagination uses `meta.page`, `meta.per_page`, `meta.total`.
+7. Active filters shown as chips with clear actions.
 
 ### Employee detail (`/employees/:id`)
 
-1. Load filters (for salary currency dropdown) and `GET /api/employees/:id`.
-2. Show identity grid, current salary card, salary history table (newest first).
-3. Add-salary form: amount, currency (`salary_currencies` from filters), effective date.
+1. Load filters (salary form + reporting currency picker) and `GET /api/employees/:id`.
+2. `GET /api/exchange_rates?base_currency=…` for indicative conversion on current salary and history rows.
+3. Show identity grid, current salary card (native + reporting approx.), salary history table (newest first).
+4. Add-salary form: amount, currency (`salary_currencies` from filters), effective date.
 4. Client-side validation (required fields, amount > 0) before POST.
 5. `POST /api/employees/:id/salary_records` as **FormData** (`salary_record[amount]`, etc.).
 6. On `201` → re-fetch show to update current salary and history.
@@ -156,11 +166,8 @@ Nav: **Insights** (home) and **Employees** in the app bar (`Layout.tsx`).
 
 ### Insights (`/`)
 
-1. Load filters → populate reporting currency dropdown from `reporting_currencies`.
-2. Resolve initial currency:
-   - `localStorage.getItem("base_currency")` if present and still in `reporting_currencies`
-   - else `default_base_currency` from filters (`USD`)
-3. `GET /api/insights?base_currency=…&country=&department=` (omit empty filter params).
+1. Load filters → searchable reporting currency picker from `reporting_currencies` (shared with employee pages).
+2. `GET /api/insights?base_currency=…&country=&department=` (omit empty filter params).
 4. Render stat cards (headcount, total, average), `rates_as_of` note, tabbed breakdowns:
    - By country
    - By department
@@ -221,10 +228,40 @@ Static country, department, role, and currency lists for dropdowns.
 |---|---|
 | `countries`, `departments`, `roles` | Employee list search filters; insights filters |
 | `salary_currencies` | Add-salary form dropdown only |
-| `reporting_currencies` | Insights reporting currency dropdown |
-| `default_base_currency` | Initial insights currency when `localStorage` is empty |
+| `reporting_currencies` | Searchable reporting currency picker (Insights, Employees, detail) |
+| `default_base_currency` | Initial reporting currency when `localStorage` is empty |
 
-HR may pick any **Frankfurter (ECB) reporting currency** (31 ISO codes above). Employee salaries stay in native currency; only insights convert.
+HR may pick any **Frankfurter (ECB) reporting currency** (31 ISO codes above). Employee salaries stay in native currency on the server; Insights totals convert on the server. Employee list/detail show **indicative** reporting-currency equivalents using `GET /api/exchange_rates` (same cached rates as Insights).
+
+### Exchange rates — `GET /api/exchange_rates`
+
+Query (optional): `base_currency` (Frankfurter ISO code; default `USD`).
+
+Returns cached Frankfurter (ECB) rates for converting salary currencies into the requested reporting currency. Used by employee list/detail for approximate per-row equivalents. Insights aggregation still happens entirely in `GET /api/insights`.
+
+| Status | When |
+|---|---|
+| `200` | Success |
+| `422` | `{ "errors": ["Base currency is not supported"] }` |
+| `503` | `{ "errors": ["Exchange rates are temporarily unavailable"] }` |
+
+```json
+{
+  "data": {
+    "base_currency": "USD",
+    "rates_as_of": "2026-09-19",
+    "rates": {
+      "USD": "1.000000",
+      "GBP": "0.790000",
+      "EUR": "0.920000",
+      "INR": "83.500000",
+      "CAD": "1.350000"
+    }
+  }
+}
+```
+
+Conversion on employee pages: `reporting_amount = native_amount / rates[native_currency]` (same formula as Insights SQL).
 
 ### List — `GET /api/employees`
 
@@ -354,7 +391,7 @@ Salary range buckets (in **base_currency** after conversion): `0-49999`, `50000-
 
 ## Out of scope for the SPA
 
-Login, routing guards, client-side FX conversion, optimistic overwrite of salary history, Next.js, server-side settings API for default currency (React uses `localStorage` + `default_base_currency` from filters).
+Login, routing guards, client-side FX for **Insights totals** (server owns aggregation), optimistic overwrite of salary history, Next.js, server-side settings API for default currency (React uses `localStorage` + `default_base_currency` from filters).
 
 ## Build order (UI) — done
 
