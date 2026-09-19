@@ -29,6 +29,9 @@ module EmployeeSalaryManagement
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
 
+    # No uploads or image variants in this API.
+    config.active_storage.variant_processor = :disabled
+
     config.generators do |g|
       g.test_framework :rspec, fixture: false
     end

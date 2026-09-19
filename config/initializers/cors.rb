@@ -1,7 +1,10 @@
 # Be sure to restart your server when you modify this file.
 
 allowed_origins = if Rails.env.production?
-  ENV.fetch("CORS_ORIGINS", "http://localhost:5173").split(",").map(&:strip)
+  ENV.fetch("CORS_ORIGINS", "http://localhost:5173")
+       .split(",")
+       .map { |origin| origin.strip.chomp("/") }
+       .reject(&:empty?)
 else
   [ %r{\Ahttp://(localhost|127\.0\.0\.1)(:\d+)?\z} ]
 end
