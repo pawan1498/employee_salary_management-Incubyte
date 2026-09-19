@@ -4,36 +4,33 @@ require "json"
 class ExchangeRateFetcher
   class UnavailableError < StandardError; end
 
-  def initialize(base_currency)
-    @base_currency = base_currency.to_s.upcase
-  end
-
   def call
-    response = fetch_rates
+    response = fetch_hub_rates
     rates_as_of = Date.parse(response.fetch("date"))
     fetched_at = Time.current
+    hub = CurrencyCatalog.hub
 
-    upsert_rate(@base_currency, @base_currency, BigDecimal("1"), fetched_at)
+    upsert_rate(hub, hub, BigDecimal("1"), fetched_at)
 
     response.fetch("rates").each do |quote_currency, rate|
-      upsert_rate(@base_currency, quote_currency, BigDecimal(rate.to_s), fetched_at)
+      upsert_rate(hub, quote_currency, BigDecimal(rate.to_s), fetched_at)
     end
 
     {
-      base_currency: @base_currency,
+      base_currency: hub,
       rates_as_of: rates_as_of,
       stale: false,
-      rates: rates_hash
+      rates: hub_rates_hash
     }
   end
 
   private
 
-  def fetch_rates
+  def fetch_hub_rates
     uri = URI(CurrencyCatalog::FRANKFURTER_URL)
     uri.query = URI.encode_www_form(
-      from: @base_currency,
-      to: CurrencyCatalog.frankfurter_quote_currencies(@base_currency).join(",")
+      from: CurrencyCatalog.hub,
+      to: CurrencyCatalog.frankfurter_hub_quotes.join(",")
     )
 
     response = Net::HTTP.get_response(uri)
@@ -52,8 +49,8 @@ class ExchangeRateFetcher
     record.update!(rate: rate, fetched_at: fetched_at)
   end
 
-  def rates_hash
-    ExchangeRate.where(base_currency: @base_currency).each_with_object({}) do |record, rates|
+  def hub_rates_hash
+    ExchangeRate.where(base_currency: CurrencyCatalog.hub).each_with_object({}) do |record, rates|
       rates[record.quote_currency] = record.rate
     end
   end

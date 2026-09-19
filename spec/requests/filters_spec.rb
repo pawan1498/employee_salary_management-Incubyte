@@ -29,8 +29,8 @@ RSpec.describe "GET /api/filters", type: :request do
       ]
     )
     expect(data.fetch("roles")).to include("Software Engineer", "Recruiter")
-    expect(data.fetch("salary_currencies")).to eq(%w[CAD EUR GBP INR USD])
-    expect(data.fetch("reporting_currencies")).to include("USD", "INR", "JPY")
+    expect(data.fetch("currencies")).to include("USD", "INR", "JPY", "CAD", "EUR", "GBP")
+    expect(data.fetch("currencies")).not_to include("BGN")
     expect(data.fetch("default_base_currency")).to eq("USD")
   end
 end

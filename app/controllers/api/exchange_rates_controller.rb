@@ -1,7 +1,7 @@
 class Api::ExchangeRatesController < ApplicationController
   def show
     base_currency = requested_base_currency
-    unless CurrencyCatalog.reporting?(base_currency)
+    unless CurrencyCatalog.supported?(base_currency)
       return render json: { errors: [ "Base currency is not supported" ] },
                     status: :unprocessable_content
     end

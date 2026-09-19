@@ -42,12 +42,18 @@ RSpec.describe SalaryRecord, type: :model do
     end
   end
 
-  context "when currency is not a supported salary currency" do
+  context "when currency is not supported by Frankfurter" do
     it "is invalid" do
-      record = SalaryRecord.new(valid_attributes.merge(currency: "JPY"))
+      record = SalaryRecord.new(valid_attributes.merge(currency: "BGN"))
 
       expect(record).not_to be_valid
-      expect(record.errors[:currency]).to include("is not a supported salary currency")
+      expect(record.errors[:currency]).to include("is not a supported currency")
+    end
+  end
+
+  context "when currency is a Frankfurter-supported reporting code" do
+    it "is valid" do
+      expect(SalaryRecord.new(valid_attributes.merge(currency: "JPY"))).to be_valid
     end
   end
 

@@ -6,35 +6,64 @@ class ExchangeRateStore
   end
 
   def refresh_if_stale!
-    return cached_snapshot(stale: false) if fresh?
-
-    ExchangeRateFetcher.new(@base_currency).call
+    ensure_hub_fresh!
+    derived_snapshot(stale: false)
   rescue ExchangeRateFetcher::UnavailableError
-    raise if cached_rates.empty?
+    raise if hub_rate_rows.empty?
 
-    cached_snapshot(stale: true)
+    derived_snapshot(stale: true)
   end
 
   private
 
-  def fresh?
-    latest_fetch = ExchangeRate.where(base_currency: @base_currency).maximum(:fetched_at)
+  def ensure_hub_fresh!
+    return if hub_fresh?
+
+    ExchangeRateFetcher.new.call
+  end
+
+  def hub_fresh?
+    latest_fetch = ExchangeRate.where(base_currency: CurrencyCatalog.hub).maximum(:fetched_at)
     latest_fetch.present? && latest_fetch >= CACHE_TTL.ago
   end
 
-  def cached_rates
-    ExchangeRate.where(base_currency: @base_currency).index_by(&:quote_currency)
+  def hub_rate_rows
+    ExchangeRate.where(base_currency: CurrencyCatalog.hub).index_by(&:quote_currency)
   end
 
-  def cached_snapshot(stale:)
-    rates = cached_rates
-    fetched_at = rates.values.map(&:fetched_at).max
+  def derived_snapshot(stale:)
+    hub_rates = hub_rate_rows
+    hub_values = hub_rates.transform_values(&:rate)
+    hub_values[CurrencyCatalog.hub] = BigDecimal("1")
+
+    base_hub_rate = hub_values.fetch(@base_currency) do
+      raise ExchangeRateFetcher::UnavailableError
+    end
+
+    quote_currencies = hub_values.keys | [ @base_currency ]
+    rates = quote_currencies.index_with do |quote_currency|
+      quote_hub_rate = hub_values.fetch(quote_currency)
+      quote_hub_rate / base_hub_rate
+    end
+
+    fetched_at = hub_rates.values.map(&:fetched_at).max
+    materialize_derived_rates!(rates, fetched_at) unless @base_currency == CurrencyCatalog.hub
 
     {
       base_currency: @base_currency,
       rates_as_of: fetched_at&.to_date,
       stale: stale,
-      rates: rates.transform_values(&:rate)
+      rates: rates
     }
+  end
+
+  def materialize_derived_rates!(rates, fetched_at)
+    rates.each do |quote_currency, rate|
+      record = ExchangeRate.find_or_initialize_by(
+        base_currency: @base_currency,
+        quote_currency: quote_currency
+      )
+      record.update!(rate: rate, fetched_at: fetched_at)
+    end
   end
 end

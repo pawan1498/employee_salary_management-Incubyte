@@ -156,17 +156,15 @@ Used on **Insights**, **Employees**, and **Employee detail**. Same `localStorage
 1. Load filters (salary form + reporting currency picker) and `GET /api/employees/:id`.
 2. `GET /api/exchange_rates?base_currency=…` for indicative conversion on current salary and history rows.
 3. Show identity grid, current salary card (native + reporting approx.), salary history table (newest first).
-4. Add-salary form: amount, currency (`salary_currencies` from filters), effective date.
+4. Add-salary form: amount, currency (`currencies` from filters), effective date.
 4. Client-side validation (required fields, amount > 0) before POST.
 5. `POST /api/employees/:id/salary_records` as **FormData** (`salary_record[amount]`, etc.).
 6. On `201` → re-fetch show to update current salary and history.
 7. On `422` → show `errors` next to the form. On `404` → not-found state.
 
-**Important:** the salary form must use `salary_currencies` (5 codes), not `reporting_currencies`. Posting JPY or other reporting-only codes returns `422`.
-
 ### Insights (`/`)
 
-1. Load filters → searchable reporting currency picker from `reporting_currencies` (shared with employee pages).
+1. Load filters → searchable reporting currency picker from `currencies` (shared with employee pages).
 2. `GET /api/insights?base_currency=…&country=&department=` (omit empty filter params).
 4. Render stat cards (headcount, total, average), `rates_as_of` note, tabbed breakdowns:
    - By country
@@ -213,9 +211,8 @@ Static country, department, role, and currency lists for dropdowns.
       "Sales Manager",
       "Software Engineer"
     ],
-    "salary_currencies": [ "CAD", "EUR", "GBP", "INR", "USD" ],
-    "reporting_currencies": [
-      "AUD", "BGN", "BRL", "CAD", "CHF", "CNY", "CZK", "DKK", "EUR", "GBP",
+    "currencies": [
+      "AUD", "BRL", "CAD", "CHF", "CNY", "CZK", "DKK", "EUR", "GBP",
       "HKD", "HUF", "IDR", "ILS", "INR", "ISK", "JPY", "KRW", "MXN", "MYR",
       "NOK", "NZD", "PHP", "PLN", "RON", "SEK", "SGD", "THB", "TRY", "USD", "ZAR"
     ],
@@ -227,11 +224,10 @@ Static country, department, role, and currency lists for dropdowns.
 | Field | UI use |
 |---|---|
 | `countries`, `departments`, `roles` | Employee list search filters; insights filters |
-| `salary_currencies` | Add-salary form dropdown only |
-| `reporting_currencies` | Searchable reporting currency picker (Insights, Employees, detail) |
+| `currencies` | Single Frankfurter-supported list — salary form, reporting picker, and API validation |
 | `default_base_currency` | Initial reporting currency when `localStorage` is empty |
 
-HR may pick any **Frankfurter (ECB) reporting currency** (31 ISO codes above). Employee salaries stay in native currency on the server; Insights totals convert on the server. Employee list/detail show **indicative** reporting-currency equivalents using `GET /api/exchange_rates` (same cached rates as Insights).
+One **`currencies`** list (30 Frankfurter ECB codes) drives everything: saving a salary, picking insights base currency, and exchange rates. Codes not in this list (e.g. BGN) return `422`. Seeded employees still use each country's native currency (USD, GBP, INR, EUR, CAD); HR may record salaries in any supported code.
 
 ### Exchange rates — `GET /api/exchange_rates`
 
@@ -338,7 +334,7 @@ Body (JSON or FormData — the UI uses FormData):
 | `422` | `{ "errors": ["..."] }` — show next to the form |
 | `404` | employee missing |
 
-Currency must be one of **`salary_currencies`** (3-letter uppercase ISO). Amount must be **> 0**. After success, re-fetch show.
+Currency must be one of **`currencies`** (3-letter uppercase ISO). Amount must be **> 0**. After success, re-fetch show.
 
 ### Insights — `GET /api/insights`
 

@@ -64,7 +64,7 @@ Current salary = the row with the latest `effective_date` for that employee; if 
 | rate | decimal, > 0 — units of quote per 1 base |
 | fetched_at | when Frankfurter was last fetched for this base |
 
-All currency codes live in `CurrencyCatalog` (salary vs reporting lists, default `USD`, Frankfurter URL). Insights accept optional `base_currency`; React persists the HR Manager’s last choice in `localStorage`. Rates are cached from Frankfurter (ECB) and refreshed lazily every 24 hours.
+All currency codes live in `CurrencyCatalog` (single Frankfurter-aligned `currencies` list, default `USD`, Frankfurter URL). Salary records, insights `base_currency`, and UI dropdowns all use the same list. React persists the HR Manager’s last choice in `localStorage`. Rates are cached from Frankfurter (ECB) via a USD hub and refreshed lazily every 24 hours.
 
 ## HTTP API (planned)
 
@@ -75,7 +75,7 @@ Prefix: `/api`. JSON.
 | GET | `/api/employees` | Paginated list. Query: `q`, `country`, `department`, `page`, `per_page`. Each row includes current salary when present. |
 | GET | `/api/employees/:id` | Identity + current salary + salary history (newest first). |
 | POST | `/api/employees/:id/salary_records` | Append a salary. Body: `amount`, `currency`, `effective_date`. |
-| GET | `/api/filters` | Countries, departments, roles, `salary_currencies`, `reporting_currencies`, and `default_base_currency`. |
+| GET | `/api/filters` | Countries, departments, roles, `currencies`, and `default_base_currency`. |
 | GET | `/api/insights` | Headcount; org-wide total/average in `base_currency` (default USD); breakdown by country and department (converted); distribution buckets. |
 
 Errors: 404 missing employee; 422 validation; 503 when exchange rates unavailable and cache is empty. Lists: `{ data, meta: { page, per_page, total } }`.

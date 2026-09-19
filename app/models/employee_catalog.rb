@@ -39,17 +39,12 @@ class EmployeeCatalog
     DEPARTMENTS.values.flatten.uniq.sort
   end
 
-  def self.currencies
-    CurrencyCatalog.salary_currencies
-  end
-
   def self.filter_options
     {
       countries: countries,
       departments: departments,
       roles: roles,
-      salary_currencies: CurrencyCatalog.salary_currencies,
-      reporting_currencies: CurrencyCatalog.reporting_currencies,
+      currencies: CurrencyCatalog.currencies,
       default_base_currency: CurrencyCatalog.default
     }
   end

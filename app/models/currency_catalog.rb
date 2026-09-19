@@ -1,11 +1,13 @@
 # Single source of truth for all currency codes and FX configuration in this app.
 #
-# - COUNTRY_CURRENCY: each seed country maps to one salary currency
-# - SALARY: derived from COUNTRY_CURRENCY (Frankfurter "to" list for FX)
-# - REPORTING: currencies HR may pick for insights (Frankfurter "from" list)
-# - DEFAULT: insights base_currency when the client sends none
+# - CURRENCIES: Frankfurter-supported ISO codes — used for salary records, insights
+#   base_currency, exchange rates, and every UI currency dropdown
+# - COUNTRY_CURRENCY: each seed country maps to one salary currency (must be in CURRENCIES)
+# - HUB: Frankfurter always fetches from this currency; other bases are derived
+# - DEFAULT: base_currency when the client sends none
 class CurrencyCatalog
   DEFAULT = "USD"
+  HUB = "USD"
   FRANKFURTER_URL = "https://api.frankfurter.dev/v1/latest"
 
   COUNTRY_CURRENCY = {
@@ -16,15 +18,18 @@ class CurrencyCatalog
     "Canada" => "CAD"
   }.freeze
 
-  SALARY = COUNTRY_CURRENCY.values.uniq.sort.freeze
-
-  REPORTING = %w[
-    AUD BGN BRL CAD CHF CNY CZK DKK EUR GBP HKD HUF IDR ILS INR ISK JPY KRW
+  # Must stay aligned with https://api.frankfurter.dev/v1/currencies
+  CURRENCIES = %w[
+    AUD BRL CAD CHF CNY CZK DKK EUR GBP HKD HUF IDR ILS INR ISK JPY KRW
     MXN MYR NOK NZD PHP PLN RON SEK SGD THB TRY USD ZAR
   ].freeze
 
   def self.default
     DEFAULT
+  end
+
+  def self.hub
+    HUB
   end
 
   def self.currency_for(country)
@@ -35,23 +40,15 @@ class CurrencyCatalog
     COUNTRY_CURRENCY.keys.sort
   end
 
-  def self.salary_currencies
-    SALARY
+  def self.currencies
+    CURRENCIES.sort
   end
 
-  def self.reporting_currencies
-    REPORTING.sort
+  def self.supported?(code)
+    CURRENCIES.include?(code.to_s.upcase)
   end
 
-  def self.reporting?(code)
-    REPORTING.include?(code.to_s.upcase)
-  end
-
-  def self.salary?(code)
-    SALARY.include?(code.to_s.upcase)
-  end
-
-  def self.frankfurter_quote_currencies(base_currency)
-    salary_currencies.reject { |currency| currency == base_currency.to_s.upcase }
+  def self.frankfurter_hub_quotes
+    currencies.reject { |currency| currency == HUB }.sort
   end
 end

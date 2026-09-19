@@ -153,19 +153,18 @@ RSpec.describe "GET /api/insights", type: :request do
     before do
       ExchangeRate.delete_all
       seed_exchange_rates(
-        base_currency: "JPY",
         rates: {
-          "JPY" => BigDecimal("1.0"),
-          "USD" => BigDecimal("0.0067"),
-          "GBP" => BigDecimal("0.0053"),
-          "EUR" => BigDecimal("0.0062"),
-          "INR" => BigDecimal("0.56"),
-          "CAD" => BigDecimal("0.0091")
+          "USD" => BigDecimal("1.0"),
+          "GBP" => BigDecimal("0.79"),
+          "EUR" => BigDecimal("0.92"),
+          "INR" => BigDecimal("83.5"),
+          "CAD" => BigDecimal("1.35"),
+          "JPY" => BigDecimal("149.25")
         }
       )
     end
 
-    it "returns org-wide totals converted to JPY" do
+    it "returns org-wide totals converted to JPY using USD hub rates" do
       create_employee_with_salary(
         { country: "United States", department: "Engineering" },
         { amount: 100_000, currency: "USD" }
@@ -175,8 +174,18 @@ RSpec.describe "GET /api/insights", type: :request do
 
       data = json_body.fetch("data")
       expect(data.fetch("base_currency")).to eq("JPY")
-      expected_total = (BigDecimal("100000") / BigDecimal("0.0067")).round(2)
+      usd_per_jpy = (BigDecimal("1") / BigDecimal("149.25")).round(8)
+      expected_total = (BigDecimal("100000") / usd_per_jpy).round(2)
       expect(BigDecimal(data.fetch("total"))).to eq(expected_total)
+    end
+  end
+
+  context "when base_currency is not supported by Frankfurter" do
+    it "returns validation errors" do
+      get "/api/insights", params: { base_currency: "BGN" }
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(json_body.fetch("errors")).to include("Base currency is not supported")
     end
   end
 

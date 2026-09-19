@@ -3,8 +3,8 @@ class SalaryRecord < ApplicationRecord
 
   validates :amount, numericality: { greater_than: 0 }
   validates :currency, presence: true, inclusion: {
-    in: ->(_) { CurrencyCatalog.salary_currencies },
-    message: "is not a supported salary currency"
+    in: ->(_) { CurrencyCatalog.currencies },
+    message: "is not a supported currency"
   }
   validates :effective_date, presence: true
 

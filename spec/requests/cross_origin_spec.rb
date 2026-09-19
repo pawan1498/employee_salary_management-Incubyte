@@ -27,6 +27,6 @@ RSpec.describe "Browser cross-origin access", type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.headers["Access-Control-Allow-Origin"]).to eq("http://localhost:5173")
-    expect(JSON.parse(response.body).fetch("data")).to include("reporting_currencies", "salary_currencies")
+    expect(JSON.parse(response.body).fetch("data")).to include("currencies", "default_base_currency")
   end
 end
