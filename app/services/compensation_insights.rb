@@ -1,5 +1,6 @@
 class CompensationInsights
-  TABLE = CurrentSalaryRecordsQuery::TABLE
+  # Column prefix for rows returned by CurrentSalaryRecordsQuery (a SQL subquery alias).
+  SALARY = CurrentSalaryRecordsQuery::ALIAS
 
   def self.call(employees)
     new(employees).as_json
@@ -23,7 +24,7 @@ class CompensationInsights
   private
 
   def currency_rows
-    grouped_totals("#{TABLE}.currency").map do |row|
+    grouped_totals("#{SALARY}.currency").map do |row|
       money_row(
         currency: row.currency,
         headcount: row.employee_count,
@@ -34,7 +35,7 @@ class CompensationInsights
   end
 
   def country_rows
-    grouped_totals("#{TABLE}.country", "#{TABLE}.currency").map do |row|
+    grouped_totals("#{SALARY}.country", "#{SALARY}.currency").map do |row|
       money_row(
         country: row.country,
         currency: row.currency,
@@ -46,7 +47,7 @@ class CompensationInsights
   end
 
   def department_rows
-    grouped_totals("#{TABLE}.department", "#{TABLE}.currency").map do |row|
+    grouped_totals("#{SALARY}.department", "#{SALARY}.currency").map do |row|
       money_row(
         department: row.department,
         currency: row.currency,
@@ -60,10 +61,10 @@ class CompensationInsights
   def distribution_rows
     @current_salaries
       .unscope(:select)
-      .group("#{TABLE}.currency", Arel.sql(amount_bucket_sql))
-      .order("#{TABLE}.currency", Arel.sql(amount_bucket_sql))
+      .group("#{SALARY}.currency", Arel.sql(amount_bucket_sql))
+      .order("#{SALARY}.currency", Arel.sql(amount_bucket_sql))
       .select(
-        "#{TABLE}.currency AS currency",
+        "#{SALARY}.currency AS currency",
         "#{amount_bucket_sql} AS bucket",
         "COUNT(*) AS employee_count"
       )
@@ -80,17 +81,17 @@ class CompensationInsights
       .select(
         *columns,
         "COUNT(*) AS employee_count",
-        "SUM(#{TABLE}.amount) AS total_amount",
-        "AVG(#{TABLE}.amount) AS average_amount"
+        "SUM(#{SALARY}.amount) AS total_amount",
+        "AVG(#{SALARY}.amount) AS average_amount"
       )
   end
 
   def amount_bucket_sql
     <<~SQL.squish
       CASE
-        WHEN #{TABLE}.amount < 50000 THEN '0-49999'
-        WHEN #{TABLE}.amount < 100000 THEN '50000-99999'
-        WHEN #{TABLE}.amount < 150000 THEN '100000-149999'
+        WHEN #{SALARY}.amount < 50000 THEN '0-49999'
+        WHEN #{SALARY}.amount < 100000 THEN '50000-99999'
+        WHEN #{SALARY}.amount < 150000 THEN '100000-149999'
         ELSE '150000+'
       END
     SQL
