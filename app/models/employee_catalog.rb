@@ -1,12 +1,23 @@
 # Static country and department values for filters and seed data.
+# Country → currency always comes from CurrencyCatalog (never duplicated here).
 class EmployeeCatalog
-  LOCATIONS = [
-    { country: "United States", currency: "USD", min: 55_000, max: 175_000 },
-    { country: "United Kingdom", currency: "GBP", min: 35_000, max: 120_000 },
-    { country: "India", currency: "INR", min: 600_000, max: 2_500_000 },
-    { country: "Germany", currency: "EUR", min: 40_000, max: 130_000 },
-    { country: "Canada", currency: "CAD", min: 50_000, max: 160_000 }
+  SALARY_RANGES = [
+    { country: "United States", min: 55_000, max: 175_000 },
+    { country: "United Kingdom", min: 35_000, max: 120_000 },
+    { country: "India", min: 600_000, max: 2_500_000 },
+    { country: "Germany", min: 40_000, max: 130_000 },
+    { country: "Canada", min: 50_000, max: 160_000 }
   ].freeze
+
+  LOCATIONS = SALARY_RANGES.map do |location|
+    country = location.fetch(:country)
+    {
+      country: country,
+      currency: CurrencyCatalog.currency_for(country),
+      min: location.fetch(:min),
+      max: location.fetch(:max)
+    }
+  end.freeze
 
   DEPARTMENTS = {
     "Engineering" => [ "Software Engineer", "Backend Engineer", "Engineering Manager" ].freeze,
@@ -28,7 +39,18 @@ class EmployeeCatalog
     DEPARTMENTS.values.flatten.uniq.sort
   end
 
+  def self.currencies
+    CurrencyCatalog.salary_currencies
+  end
+
   def self.filter_options
-    { countries: countries, departments: departments, roles: roles }
+    {
+      countries: countries,
+      departments: departments,
+      roles: roles,
+      salary_currencies: CurrencyCatalog.salary_currencies,
+      reporting_currencies: CurrencyCatalog.reporting_currencies,
+      default_base_currency: CurrencyCatalog.default
+    }
   end
 end
