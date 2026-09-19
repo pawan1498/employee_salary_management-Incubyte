@@ -55,6 +55,17 @@ Current salary = the row with the latest `effective_date` for that employee; if 
 
 **Integrity:** NOT NULL, FK, unique employee number. Amount/currency also validated in the model for API errors.
 
+**exchange_rates**
+
+| Column | Notes |
+|---|---|
+| base_currency | ISO 4217, part of unique index |
+| quote_currency | ISO 4217, part of unique index |
+| rate | decimal, > 0 — units of quote per 1 base |
+| fetched_at | when Frankfurter was last fetched for this base |
+
+All currency codes live in `CurrencyCatalog` (salary vs reporting lists, default `USD`, Frankfurter URL). Insights accept optional `base_currency`; React persists the HR Manager’s last choice in `localStorage`. Rates are cached from Frankfurter (ECB) and refreshed lazily every 24 hours.
+
 ## HTTP API (planned)
 
 Prefix: `/api`. JSON.
@@ -64,11 +75,12 @@ Prefix: `/api`. JSON.
 | GET | `/api/employees` | Paginated list. Query: `q`, `country`, `department`, `page`, `per_page`. Each row includes current salary when present. |
 | GET | `/api/employees/:id` | Identity + current salary + salary history (newest first). |
 | POST | `/api/employees/:id/salary_records` | Append a salary. Body: `amount`, `currency`, `effective_date`. |
-| GET | `/api/insights` | Headcount; totals/averages **by currency**; breakdown by country and department (currency on each row); distribution buckets per currency. |
+| GET | `/api/filters` | Countries, departments, roles, `salary_currencies`, `reporting_currencies`, and `default_base_currency`. |
+| GET | `/api/insights` | Headcount; org-wide total/average in `base_currency` (default USD); breakdown by country and department (converted); distribution buckets. |
 
-Errors: 404 missing employee; 422 validation. Lists: `{ data, meta: { page, per_page, total } }`.
+Errors: 404 missing employee; 422 validation; 503 when exchange rates unavailable and cache is empty. Lists: `{ data, meta: { page, per_page, total } }`.
 
-Insights **never** sum mixed currencies into one number.
+Insights convert each current salary to the requested `base_currency` using cached Frankfurter rates before aggregating.
 
 ## TDD order
 
@@ -79,8 +91,9 @@ Outside-in: request spec first, then minimum implementation, then model spec onl
 3. Show employee + current salary
 4. Append-only salary update + invalid input
 5. Insights aggregations (SQL, not Ruby loops) — done: `GET /api/insights`
-6. Seed 10,000 employees — done: `bin/rails db:seed` (`EmployeeSeeder`)
-7. React: insights, list, detail + update form
+6. FX conversion for insights — done: `base_currency` param + Frankfurter cache
+7. Seed 10,000 employees — done: `bin/rails db:seed` (`EmployeeSeeder`)
+8. React: insights, list, detail + update form
 
 Each slice should be one or two commits (`test:` then `feat:`).
 
@@ -98,7 +111,7 @@ Vite + React. See **[FRONTEND.md](FRONTEND.md)** for screens, env, and the JSON 
 
 ## Deliberately not in this design
 
-Login/SSO, FX conversion, payroll/tax, Excel import, delete employee, background jobs, Elasticsearch, generic service layers.
+Login/SSO, payroll-grade FX, payroll/tax, Excel import, delete employee, background jobs, Elasticsearch, generic service layers.
 
 ## Delivery
 

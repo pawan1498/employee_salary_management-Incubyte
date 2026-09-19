@@ -1,25 +1,38 @@
 # ACME Employee Salary Management — Requirements
 
-**Persona:** HR Manager at ACME  
+**Context:** This is my **Incubyte take-home assignment** (Software Craftsperson / Ruby on Rails). ACME and the HR Manager are the **given scenario**, not a real client or production product. This one-page doc is the **scope contract for what I chose to build and deliberately leave out**, with reasoning reviewers can discuss in the interview.
+
+**Persona:** HR Manager at ACME
 **Problem:** Salary data for ~10,000 employees across countries lives in Excel. That is slow, error-prone, and poor for answering “how do we pay people?”
 
 ## Goal
 
-Give the HR Manager a web app to **maintain employee salary data** and **answer compensation questions** (cost, headcount, distribution, comparisons by country and department).
+Within the assignment constraints, build software so the HR Manager can **maintain employee salary data** and **answer compensation questions** (cost, headcount, distribution, comparisons by country and department).
 
-This document is the product contract. Features not listed here are out of scope unless this file is updated first.
+Features not listed here are out of scope for **this submission** unless this file is updated first.
 
-**Incubyte guidance (confirmed):** Salary history, reporting metrics, currency handling, employee fields, and optional CSV export are left to product judgment. Payroll, tax, self-service, approval workflows, and advanced access control are **not** required. Decisions below reflect that guidance.
+**Incubyte guidance (confirmed):** Salary history, reporting metrics, currency handling, employee fields, and optional CSV export are left to my judgment. Payroll, tax, self-service, approval workflows, and advanced access control are **not** required. Decisions below reflect that guidance.
+
+## Scope decisions (Incubyte guidance)
+
+| Topic | We chose | Why |
+|---|---|---|
+| **Salary history** | Append-only rows with `effective_date` | HR needs to see past pay changes, not only today’s number. Overwriting would lose audit trail. |
+| **Reports** | Headcount; org-wide total and average in a chosen **reporting currency**; breakdown by country and department; distribution buckets — all converted to that currency | HR needs one comparable view across countries, not separate currency silos. |
+| **Median salary** | Left out of this submission | Average plus distribution buckets already show typical pay; median adds SQL/UI cost with little extra HR value for the assignment. |
+| **Currency** | Native currency on each salary record; insights converted via `base_currency` query param and cached **Frankfurter** (ECB) rates | Stateless API; React stores HR’s last choice in `localStorage`. Rates are indicative, not payroll truth. |
+| **Employee fields** | `employee_number`, name, country, department, role; salary on `salary_records` | Enough to find people, update pay, and report. **Joining date omitted** — useful for tenure later, not needed for the assignment flows. |
+| **Scope** | Salary management + reporting only | Payroll, tax, benefits, self-service, approval workflows, and auth are different products and would dominate the assessment. |
+| **CSV export** | Should-have after must-haves | Useful for HR, not required to prove the core problem. |
 
 ## In scope (must have)
 
 1. **Employee directory** — Paginated list of employees. Search by name or employee number. Filter by country and department (and role if present on the record).
 2. **Employee record** — View identity fields plus **current salary** (amount, currency, effective date).
 3. **Update salary** — Record a new current salary. Previous salary rows stay as history (append; do not silently overwrite).
-4. **Compensation insights** — Headcount; total salary cost and average salary **within a currency or country** (no FX conversion); breakdown **by country** and **by department**; salary distribution (amount buckets) for the filtered set. **Median salary is out of scope** — average plus distribution answer “typical pay” without extra SQL/UI; add later if HR asks for it.
+4. **Compensation insights** — Headcount; org-wide total and average in a **reporting currency** (`base_currency` param, default `USD`); breakdown **by country** and **by department** (converted); salary distribution buckets. **Median salary is out of scope.**
 5. **Seed data** — Script that creates **10,000** realistic employees across multiple countries and departments, each with a current salary (and enough history to demonstrate the feature).
 6. **Delivery** — Rails backend, relational DB, **React (Vite) UI**, meaningful tests, deployed app, video demo.
-
 **Primary flow:** Insights (or home) → employee list (search/filter) → employee detail → update salary / view history.
 
 ## Should have (only if must-haves are done)
@@ -35,7 +48,7 @@ This document is the product contract. Features not listed here are out of scope
 |---|---|
 | Login / SSO / roles | Assessment is a single HR-manager tool. Auth is not required and would dominate time without proving the salary problem. Treat as an internal app. |
 | Payroll, tax, benefits, attendance, leave, recruitment, performance, self-service | Different products. Would explode scope. |
-| FX conversion / org-wide “total pay in USD” | Countries imply multiple currencies. Converting without a rate source is fiction; summing mixed currencies is misleading. Compare **within country/currency**. |
+| Real-time payroll-grade FX | Insights use cached daily ECB rates (Frankfurter). Fine for management reporting; not for payroll or tax. |
 | Median salary | Average + distribution buckets cover “typical pay” for v1; median adds query/UI cost with little extra insight for HR. |
 | Joining date | Useful for tenure analytics; not required for directory, salary update, or the insights above. |
 | Bulk Excel import, email, approval workflows | Nice for Excel migration; not needed to prove manage + insights. |
@@ -44,7 +57,7 @@ This document is the product contract. Features not listed here are out of scope
 
 ## Data (minimum)
 
-- **Employee:** employee number (unique), name, country, department, role/title. **Joining date is out of scope** — not needed to find someone, update pay, or answer compensation questions in v1.
+- **Employee:** employee number (unique), name, country, department, role/title. **Joining date is out of scope** — not needed to find someone, update pay, or answer compensation questions in this submission.
 - **Salary record:** amount, ISO currency, effective date; current salary = latest effective record per employee. Currency lives on the salary row (can change if an employee moves country).
 
 Invariants belong in the database (uniqueness, required fields, foreign keys) as well as validations.
@@ -52,11 +65,11 @@ Invariants belong in the database (uniqueness, required fields, foreign keys) as
 ## Assumptions
 
 - One HR Manager; no employee-facing access.
-- **Currency:** store and report in **native currency** per salary record. Incubyte left FX open; we do **not** convert to a common currency — no rate source, and a single “org total in USD” would be misleading. Compare within country/currency instead.
+- **Currency:** each salary record keeps its **native currency**. Insights accept `base_currency` (Frankfurter-supported ISO code, default `USD`); React persists the HR Manager’s last choice in `localStorage`. Rates are cached 24h from Frankfurter (ECB). Totals are **indicative**, not payroll truth.
 - Seeded employees exist so HR’s main job is find → understand → update pay.
 - “Current salary” is the salary record with the latest `effective_date` (tie-break: latest `id`).
 - **Salary history** is included (append-only rows with effective dates) because HR needs to see past changes, not only today’s number.
 
 ## Success
 
-On seeded data, the HR Manager can find someone, change their salary, see previous amounts, and answer: how many people, what we spend (per country/currency), and how pay sits by department—without opening Excel.
+On seeded data, the HR Manager can find someone, change their salary, see previous amounts, pick a reporting currency for insights, and answer: how many people, what we spend org-wide (in that currency), and how pay sits by country and department—without opening Excel.

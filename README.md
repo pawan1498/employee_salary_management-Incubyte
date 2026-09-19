@@ -4,7 +4,7 @@ Rails JSON API for Incubyte's Software Craftsperson / RoR take-home.
 
 HR Managers use a separate **React (Vite) SPA** to search employees, view salary history, add salary records, and read compensation insights. This repo is the **Rails backend only**.
 
-**Product contract:** [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) · **API notes for the UI:** [docs/FRONTEND.md](docs/FRONTEND.md)
+**Assignment scope (one-page requirements):** [docs/REQUIREMENTS.md](docs/REQUIREMENTS.md) · **API notes for the UI:** [docs/FRONTEND.md](docs/FRONTEND.md)
 
 ## Live deployment
 
@@ -122,7 +122,7 @@ All routes are under `/api`. Responses are JSON.
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/up` | Health check |
-| `GET` | `/api/insights` | Headcount, totals by currency, breakdowns |
+| `GET` | `/api/insights` | Headcount, org total/average in `base_currency` (default USD), breakdowns |
 | `GET` | `/api/employees` | Paginated list (`q`, `country`, `department`, `role`, `page`, `per_page`) |
 | `GET` | `/api/employees/:id` | Employee + current salary + history |
 | `POST` | `/api/employees/:id/salary_records` | Append a new salary record |

@@ -2,7 +2,7 @@
 
 Companion to [REQUIREMENTS.md](REQUIREMENTS.md) and [DESIGN.md](DESIGN.md).
 
-The UI is a **Vite + React SPA**. It talks JSON to the Rails API. It must not invent business rules (current salary, totals, FX). If the API does not return it, the screen shows empty/missing—not a client-side guess.
+The UI is a **Vite + React SPA** in a **separate repository** (`employee_salary_management-frontend-Incubyte`). It talks JSON to this Rails API. It must not invent business rules (current salary, totals, FX). If the API does not return it, the screen shows empty/missing—not a client-side guess.
 
 Update this file whenever an API contract used by the UI changes.
 
@@ -11,21 +11,64 @@ Update this file whenever an API contract used by the UI changes.
 **User:** HR Manager. **No login.**
 
 ```text
-Insights (home)     → compensation questions
-Employees           → search, country, department, pagination
+Insights (home)     → compensation questions in a chosen reporting currency
+Employees           → search, country, department, role, pagination
 Employee detail     → profile, current pay, history, add salary
 ```
 
 Do not add employee delete, Excel import, or auth.
 
-## Stack (when we scaffold)
+## Stack (implemented)
 
-- Vite + React (JavaScript or TypeScript—pick one and keep it)
-- One component library (e.g. shadcn or MUI)—not a custom design system
-- `fetch` or a thin `api.js` helper. No Redux unless the UI is painful without it
-- Env: `VITE_API_URL` (e.g. `http://localhost:3000`)
+| Layer | Choice |
+|---|---|
+| Build | Vite |
+| UI | React + TypeScript |
+| Components | MUI |
+| Routing | React Router |
+| Data | Native `fetch` via `src/api/api.ts`; local React state only |
+| Config | `VITE_API_URL` (e.g. `http://localhost:3000`) |
 
 The browser treats Vite (`localhost:5173`) and Rails (`localhost:3000`) as different sites. `curl` does not. `config/initializers/cors.rb` (`rack-cors`) allows local Vite origins and, in production, `CORS_ORIGINS`. Restart Rails after changing CORS.
+
+### Frontend repo layout (key files)
+
+```text
+src/
+  api/           api.ts, employees.ts, filters.ts, insights.ts
+  hooks/         useFilters.ts
+  pages/         InsightsPage, EmployeesPage, EmployeeDetailPage
+  types/         employee, filters, insights, salary
+  constants/     storage.ts (localStorage key for base currency)
+  components/    Layout, FilterBar, Pagination, loading/empty/error states
+```
+
+## Local development
+
+**Terminal 1 — Rails API (this repo)**
+
+```bash
+bin/rails db:migrate
+bin/rails db:seed   # optional; creates 10,000 employees
+bin/rails server    # http://localhost:3000
+```
+
+**Terminal 2 — React SPA (frontend repo)**
+
+```bash
+cp .env.example .env   # VITE_API_URL=http://localhost:3000
+npm install
+npm run dev            # http://localhost:5173
+```
+
+Smoke-test from the shell (no CORS needed):
+
+```bash
+curl -s http://localhost:3000/api/filters -H 'Accept: application/json'
+curl -s 'http://localhost:3000/api/insights?base_currency=USD' -H 'Accept: application/json'
+```
+
+The browser sends `Origin: http://localhost:5173`; the API must include `Access-Control-Allow-Origin` on responses.
 
 ## Deploy on Render
 
@@ -37,8 +80,8 @@ The browser treats Vite (`localhost:5173`) and Rails (`localhost:3000`) as diffe
 | Rails API | https://employee-salary-management-incubyte.onrender.com |
 
 ```text
-Static Site (React)  →  VITE_API_URL=https://employee-salary-management-incubyte.onrender.com
-Web Service (Rails)  →  CORS_ORIGINS=https://employee-salary-management-frontend-sdqh.onrender.com
+React (frontend repo)  →  VITE_API_URL=https://employee-salary-management-incubyte.onrender.com
+Rails (this repo)      →  CORS_ORIGINS=https://employee-salary-management-frontend-sdqh.onrender.com
 ```
 
 To keep local dev working too, comma-separate both origins on the API:
@@ -47,45 +90,91 @@ To keep local dev working too, comma-separate both origins on the API:
 CORS_ORIGINS=http://localhost:5173,https://employee-salary-management-frontend-sdqh.onrender.com
 ```
 
-**API (repo scripts; env vars live in Render dashboard)**
+**API (this repo; env vars live in Render dashboard)**
 
 - `bin/render-build.sh` — `bundle install`
 - `bin/render-start.sh` — `db:prepare`, idempotent `db:seed`, Puma
 
-**UI (when scaffolded)**
+**UI (frontend repo)**
 
 | Setting | Value |
 |---|---|
-| Type | Static Site |
-| Root directory | `frontend` |
-| Build command | `npm install && npm run build` |
-| Publish directory | `dist` |
-| Env | `VITE_API_URL=https://<api>.onrender.com` |
+| Build command | `npm install --include=dev && npm run build` |
+| Start command (Web Service) | `npm start` |
+| Publish directory (Static Site) | `dist` |
+| Env | `VITE_API_URL=https://employee-salary-management-incubyte.onrender.com` |
 
-Add a SPA fallback (`public/_redirects` or equivalent) so `/employees/:id` serves `index.html`.
+Add a SPA fallback (`public/_redirects` → `/* /index.html 200`) so `/employees/:id` serves `index.html`.
 
 **Flow after both are live**
 
-1. Set `CORS_ORIGINS` on the API to the Static Site URL.
-2. Redeploy the API.
-3. Smoke-test: Insights → employee list → detail → add salary.
+1. Run migrations on the API (includes `exchange_rates` table).
+2. Set `CORS_ORIGINS` on the API to the Static Site URL (plus localhost if needed).
+3. Redeploy API, then UI.
+4. Smoke-test: Insights → employee list → detail → add salary.
 
-## Screens
+First insights request after deploy may fetch FX rates from Frankfurter; subsequent requests use the 24-hour cache.
 
-| Route | Purpose | API ready now? |
+## Screens and routes
+
+| Route | Purpose | API |
 |---|---|---|
-| `/employees` | Directory: `q`, country, department, page | **Yes** — `GET /api/employees` includes `current_salary` |
-| `/employees/:id` | Identity, current pay, history | **Yes** — `GET /api/employees/:id` |
-| `/employees/:id` form | Add salary | **Yes** — `POST /api/employees/:id/salary_records` with nested `salary_record` |
-| `/` insights | Headcount, totals by currency, by country/department | **Yes** — `GET /api/insights` |
+| `/` | Insights: headcount, total/average, by country/department, salary ranges | `GET /api/filters`, `GET /api/insights` |
+| `/employees` | Directory: search, country, department, role, pagination | `GET /api/filters`, `GET /api/employees` |
+| `/employees/:id` | Identity, current pay, history, add-salary form | `GET /api/filters`, `GET /api/employees/:id`, `POST …/salary_records` |
 
-Do not start Insights UI until you can call the endpoint below. List + detail + salary form can start after list/show/POST are documented below.
+Nav: **Insights** (home) and **Employees** in the app bar (`Layout.tsx`).
+
+## Page flows (as implemented)
+
+### Shared: filters bootstrap
+
+1. `useFilters()` calls `GET /api/filters` once on mount.
+2. While loading → show loading state; on failure → error state (page cannot render dropdowns).
+3. Dropdowns include an empty **All** option; omit the query param when All is selected (`api.ts` skips empty strings).
+
+### Employees (`/employees`)
+
+1. Load filters → render search box + country/department/role dropdowns.
+2. Search input is debounced (300 ms) before setting `q` and resetting to page 1.
+3. `GET /api/employees?q=&country=&department=&role=&page=1&per_page=25`.
+4. Table shows employee number, name, country, department, role, current salary (or “—”).
+5. Row links to `/employees/:id`. Pagination uses `meta.page`, `meta.per_page`, `meta.total`.
+6. Active filters shown as chips with clear actions.
+
+### Employee detail (`/employees/:id`)
+
+1. Load filters (for salary currency dropdown) and `GET /api/employees/:id`.
+2. Show identity grid, current salary card, salary history table (newest first).
+3. Add-salary form: amount, currency (`salary_currencies` from filters), effective date.
+4. Client-side validation (required fields, amount > 0) before POST.
+5. `POST /api/employees/:id/salary_records` as **FormData** (`salary_record[amount]`, etc.).
+6. On `201` → re-fetch show to update current salary and history.
+7. On `422` → show `errors` next to the form. On `404` → not-found state.
+
+**Important:** the salary form must use `salary_currencies` (5 codes), not `reporting_currencies`. Posting JPY or other reporting-only codes returns `422`.
+
+### Insights (`/`)
+
+1. Load filters → populate reporting currency dropdown from `reporting_currencies`.
+2. Resolve initial currency:
+   - `localStorage.getItem("base_currency")` if present and still in `reporting_currencies`
+   - else `default_base_currency` from filters (`USD`)
+3. `GET /api/insights?base_currency=…&country=&department=` (omit empty filter params).
+4. Render stat cards (headcount, total, average), `rates_as_of` note, tabbed breakdowns:
+   - By country
+   - By department
+   - Salary ranges (`distribution` buckets)
+5. Country/department filters reuse the same filter bar pattern as employees.
+6. Currency change → save to `localStorage` (`base_currency` key), refetch insights.
+7. On `503` (FX unavailable) → error state with retry. On `422` (bad currency) → show API errors.
+8. Do **not** convert amounts in the browser — the API owns FX math.
 
 ## API the UI should call (as implemented)
 
-**Filter dropdowns** `GET /api/filters`
+### Filter dropdowns — `GET /api/filters`
 
-Static country, department, and role values for search dropdowns. Include an empty “All” option in the UI; send no query param when All is selected.
+Static country, department, role, and currency lists for dropdowns.
 
 ```json
 {
@@ -116,14 +205,28 @@ Static country, department, and role values for search dropdowns. Include an emp
       "Recruiter",
       "Sales Manager",
       "Software Engineer"
-    ]
+    ],
+    "salary_currencies": [ "CAD", "EUR", "GBP", "INR", "USD" ],
+    "reporting_currencies": [
+      "AUD", "BGN", "BRL", "CAD", "CHF", "CNY", "CZK", "DKK", "EUR", "GBP",
+      "HKD", "HUF", "IDR", "ILS", "INR", "ISK", "JPY", "KRW", "MXN", "MYR",
+      "NOK", "NZD", "PHP", "PLN", "RON", "SEK", "SGD", "THB", "TRY", "USD", "ZAR"
+    ],
+    "default_base_currency": "USD"
   }
 }
 ```
 
-Use the returned strings as `country`, `department`, and `role` query params on `GET /api/employees`. Insights accepts `country` and `department` only.
+| Field | UI use |
+|---|---|
+| `countries`, `departments`, `roles` | Employee list search filters; insights filters |
+| `salary_currencies` | Add-salary form dropdown only |
+| `reporting_currencies` | Insights reporting currency dropdown |
+| `default_base_currency` | Initial insights currency when `localStorage` is empty |
 
-**List** `GET /api/employees`
+HR may pick any **Frankfurter (ECB) reporting currency** (31 ISO codes above). Employee salaries stay in native currency; only insights convert.
+
+### List — `GET /api/employees`
 
 Query: `q`, `country`, `department`, `role`, `page`, `per_page` (default 25, max 100). `q` matches name, employee number, or role (partial match).
 
@@ -136,7 +239,7 @@ Query: `q`, `country`, `department`, `role`, `page`, `per_page` (default 25, max
       "name": "Grace Hopper",
       "country": "United States",
       "department": "Engineering",
-      "role": "Rear Admiral",
+      "role": "Software Engineer",
       "current_salary": {
         "id": 10,
         "amount": "95000.0",
@@ -151,7 +254,7 @@ Query: `q`, `country`, `department`, `role`, `page`, `per_page` (default 25, max
 
 `current_salary` is `null` when the employee has no salary records. List does not include full history.
 
-**Show** `GET /api/employees/:id`
+### Show — `GET /api/employees/:id`
 
 ```json
 {
@@ -161,7 +264,7 @@ Query: `q`, `country`, `department`, `role`, `page`, `per_page` (default 25, max
     "name": "Grace Hopper",
     "country": "United States",
     "department": "Engineering",
-    "role": "Rear Admiral",
+    "role": "Software Engineer",
     "current_salary": {
       "id": 10,
       "amount": "95000.0",
@@ -178,9 +281,9 @@ Query: `q`, `country`, `department`, `role`, `page`, `per_page` (default 25, max
 
 Missing id → **404** `{ "errors": ["Not found"] }`. Current salary is the latest `effective_date`, then latest `id`. History is newest first.
 
-**Create salary** `POST /api/employees/:id/salary_records`
+### Create salary — `POST /api/employees/:id/salary_records`
 
-Body (form or JSON):
+Body (JSON or FormData — the UI uses FormData):
 
 ```json
 {
@@ -192,64 +295,76 @@ Body (form or JSON):
 }
 ```
 
-- `201` → `{ "data": { "id", "amount", "currency", "effective_date" } }`
-- `422` → `{ "errors": ["..."] }` (show next to the form)
-- `404` → employee missing
+| Status | Response |
+|---|---|
+| `201` | `{ "data": { "id", "amount", "currency", "effective_date" } }` |
+| `422` | `{ "errors": ["..."] }` — show next to the form |
+| `404` | employee missing |
 
-Currency: 3-letter **uppercase** ISO (e.g. `USD`). Amount must be **> 0**. After success, reload show (or append locally only if the API later returns history).
+Currency must be one of **`salary_currencies`** (3-letter uppercase ISO). Amount must be **> 0**. After success, re-fetch show.
 
-**Insights** `GET /api/insights`
+### Insights — `GET /api/insights`
 
-Query (optional, same as the directory): `country`, `department`.
+Query (optional): `country`, `department`, `base_currency` (Frankfurter ISO code; default `USD`).
 
-Uses each employee's **current** salary only. Never sums mixed currencies into one number. Money fields are decimal strings. Headcount is the employee count for the filter (people without a salary are counted there but omitted from money breakdowns).
+Uses each employee's **current** salary only, converted to `base_currency` using cached Frankfurter (ECB) rates (`https://api.frankfurter.dev/v1/latest`). Rates refresh lazily every 24 hours; if Frankfurter is down but a cache exists, stale rates are used.
+
+Money fields are decimal strings with two fractional digits. Headcount is the employee count for the filter (people without a salary are counted there but omitted from money breakdowns). Breakdown rows have **no per-row `currency` field** — all amounts are already in `base_currency`.
+
+| Status | When |
+|---|---|
+| `200` | Success |
+| `422` | `{ "errors": ["Base currency is not supported"] }` |
+| `503` | `{ "errors": ["Exchange rates are temporarily unavailable"] }` — no cache and Frankfurter unreachable |
 
 ```json
 {
   "data": {
+    "base_currency": "USD",
+    "rates_as_of": "2026-09-19",
     "headcount": 3,
-    "by_currency": [
-      { "currency": "USD", "headcount": 2, "total": "150000.0", "average": "75000.0" }
-    ],
+    "total": "151000.00",
+    "average": "50333.33",
     "by_country": [
-      { "country": "United States", "currency": "USD", "headcount": 2, "total": "150000.0", "average": "75000.0" }
+      { "country": "United States", "headcount": 2, "total": "150000.00", "average": "75000.00" },
+      { "country": "India", "headcount": 1, "total": "1000.00", "average": "1000.00" }
     ],
     "by_department": [
-      { "department": "Engineering", "currency": "USD", "headcount": 2, "total": "150000.0", "average": "75000.0" }
+      { "department": "Engineering", "headcount": 3, "total": "151000.00", "average": "50333.33" }
     ],
     "distribution": [
-      { "currency": "USD", "bucket": "0-49999", "headcount": 1 },
-      { "currency": "USD", "bucket": "50000-99999", "headcount": 1 },
-      { "currency": "USD", "bucket": "100000-149999", "headcount": 1 },
-      { "currency": "USD", "bucket": "150000+", "headcount": 1 }
+      { "bucket": "0-49999", "headcount": 1 },
+      { "bucket": "50000-99999", "headcount": 1 },
+      { "bucket": "100000-149999", "headcount": 1 }
     ]
   }
 }
 ```
 
-Amount buckets (native currency, not converted): `0-49999`, `50000-99999`, `100000-149999`, `150000+`.
+Salary range buckets (in **base_currency** after conversion): `0-49999`, `50000-99999`, `100000-149999`, `150000+`.
 
 ## UX bar
 
-- Loading, empty (“No employees match”), and error states
+- Loading, empty (“No employees match”), and error states on every page
 - Paginate; never fetch 10k rows
 - Disable submit while POST is in flight
-- Show 422 messages from `errors`
-- Simple table + one form—not dashboard kits
+- Show 422 / 503 messages from `errors` (via `ApiError` in `api.ts`)
+- Insights retry on transient FX failure
+- Simple tables + one form—not dashboard kits
 
 ## Out of scope for the SPA
 
-Login, routing guards, FX conversion, mixing currencies into one “total pay”, optimistic overwrite of salary history, Next.js.
+Login, routing guards, client-side FX conversion, optimistic overwrite of salary history, Next.js, server-side settings API for default currency (React uses `localStorage` + `default_base_currency` from filters).
 
-## Build order (UI)
+## Build order (UI) — done
 
-1. Vite app + `VITE_API_URL` + CORS  
-2. Employee list (search, filters, pagination)  
-3. Employee detail (identity)  
-4. Add-salary form (POST)  
-5. Display `current_salary` / `salary_history` from list and show  
-6. Insights page after `GET /api/insights`
+1. ✅ Vite app + `VITE_API_URL` + CORS
+2. ✅ Employee list (search, filters, pagination)
+3. ✅ Employee detail (identity)
+4. ✅ Add-salary form (POST)
+5. ✅ Display `current_salary` / `salary_history` from list and show
+6. ✅ Insights page: currency picker (`localStorage` + `base_currency` param) + `GET /api/insights`
 
 ## Maintenance
 
-When a request spec changes the JSON shape, update **this file in the same commit** (or the immediately following `docs:` commit) so reviewers and the React app stay aligned.
+When a request spec changes the JSON shape, update **this file in the same commit** (or the immediately following `docs:` commit) so reviewers and the React app stay aligned. Mirror critical API notes in the frontend repo `README.md` when the SPA contract changes.
