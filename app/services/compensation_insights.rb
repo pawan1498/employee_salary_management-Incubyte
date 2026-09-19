@@ -1,20 +1,43 @@
 class CompensationInsights
   # Column prefix for rows returned by CurrentSalaryRecordsQuery (a SQL subquery alias).
   SALARY = CurrentSalaryRecordsQuery::ALIAS
+  CONVERTED_AMOUNT_SQL = "CAST(#{SALARY}.amount AS REAL) / exchange_rates.rate".freeze
+  SUM_CONVERTED_SQL = "SUM(#{CONVERTED_AMOUNT_SQL})".freeze
+  AVG_CONVERTED_SQL = "AVG(#{CONVERTED_AMOUNT_SQL})".freeze
+  AMOUNT_BUCKET_SQL = <<~SQL.squish.freeze
+    CASE
+      WHEN #{CONVERTED_AMOUNT_SQL} < 50000 THEN '0-49999'
+      WHEN #{CONVERTED_AMOUNT_SQL} < 100000 THEN '50000-99999'
+      WHEN #{CONVERTED_AMOUNT_SQL} < 150000 THEN '100000-149999'
+      ELSE '150000+'
+    END
+  SQL
+  EXCHANGE_RATE_JOIN_SQL = <<~SQL.squish.freeze
+    INNER JOIN exchange_rates
+      ON exchange_rates.quote_currency = #{SALARY}.currency
+     AND exchange_rates.base_currency = ?
+  SQL
 
-  def self.call(employees)
-    new(employees).as_json
+  def self.call(employees, base_currency:, rates_as_of:)
+    new(employees, base_currency:, rates_as_of:).as_json
   end
 
-  def initialize(employees)
+  def initialize(employees, base_currency:, rates_as_of:)
     @employees = employees
+    @base_currency = base_currency.to_s.upcase
+    @rates_as_of = rates_as_of
     @current_salaries = CurrentSalaryRecordsQuery.new(employees).relation
   end
 
   def as_json(*)
+    total_amount, average_amount = org_stats
+
     {
+      base_currency: @base_currency,
+      rates_as_of: @rates_as_of.iso8601,
       headcount: @employees.count,
-      by_currency: currency_rows,
+      total: format_money(total_amount),
+      average: format_money(average_amount),
       by_country: country_rows,
       by_department: department_rows,
       distribution: distribution_rows
@@ -23,22 +46,16 @@ class CompensationInsights
 
   private
 
-  def currency_rows
-    grouped_totals("#{SALARY}.currency").map do |row|
-      money_row(
-        currency: row.currency,
-        headcount: row.employee_count,
-        total: row.total_amount,
-        average: row.average_amount
-      )
-    end
+  def org_stats
+    salaries_with_rates
+      .unscope(:select)
+      .pick(Arel.sql(SUM_CONVERTED_SQL), Arel.sql(AVG_CONVERTED_SQL))
   end
 
   def country_rows
-    grouped_totals("#{SALARY}.country", "#{SALARY}.currency").map do |row|
+    grouped_totals("#{SALARY}.country").map do |row|
       money_row(
         country: row.country,
-        currency: row.currency,
         headcount: row.employee_count,
         total: row.total_amount,
         average: row.average_amount
@@ -47,10 +64,9 @@ class CompensationInsights
   end
 
   def department_rows
-    grouped_totals("#{SALARY}.department", "#{SALARY}.currency").map do |row|
+    grouped_totals("#{SALARY}.department").map do |row|
       money_row(
         department: row.department,
-        currency: row.currency,
         headcount: row.employee_count,
         total: row.total_amount,
         average: row.average_amount
@@ -59,42 +75,36 @@ class CompensationInsights
   end
 
   def distribution_rows
-    @current_salaries
+    salaries_with_rates
       .unscope(:select)
-      .group("#{SALARY}.currency", Arel.sql(amount_bucket_sql))
-      .order("#{SALARY}.currency", Arel.sql(amount_bucket_sql))
+      .group(Arel.sql(AMOUNT_BUCKET_SQL))
+      .order(Arel.sql(AMOUNT_BUCKET_SQL))
       .select(
-        "#{SALARY}.currency AS currency",
-        "#{amount_bucket_sql} AS bucket",
+        "#{AMOUNT_BUCKET_SQL} AS bucket",
         "COUNT(*) AS employee_count"
       )
       .map do |row|
-        { currency: row.currency, bucket: row.bucket, headcount: row.employee_count.to_i }
+        { bucket: row.bucket, headcount: row.employee_count.to_i }
       end
   end
 
   def grouped_totals(*columns)
-    @current_salaries
+    salaries_with_rates
       .unscope(:select)
       .group(*columns)
       .order(*columns)
       .select(
         *columns,
         "COUNT(*) AS employee_count",
-        "SUM(#{SALARY}.amount) AS total_amount",
-        "AVG(#{SALARY}.amount) AS average_amount"
+        "#{SUM_CONVERTED_SQL} AS total_amount",
+        "#{AVG_CONVERTED_SQL} AS average_amount"
       )
   end
 
-  def amount_bucket_sql
-    <<~SQL.squish
-      CASE
-        WHEN #{SALARY}.amount < 50000 THEN '0-49999'
-        WHEN #{SALARY}.amount < 100000 THEN '50000-99999'
-        WHEN #{SALARY}.amount < 150000 THEN '100000-149999'
-        ELSE '150000+'
-      END
-    SQL
+  def salaries_with_rates
+    @salaries_with_rates ||= @current_salaries.joins(
+      Employee.sanitize_sql_array([ EXCHANGE_RATE_JOIN_SQL, @base_currency ])
+    )
   end
 
   def money_row(headcount:, total:, average:, **identity)
@@ -106,6 +116,8 @@ class CompensationInsights
   end
 
   def format_money(value)
-    BigDecimal(value.to_s).round(2).to_s("F")
+    return "0.00" if value.nil?
+
+    format("%.2f", BigDecimal(value.to_s).round(2))
   end
 end
