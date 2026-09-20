@@ -47,23 +47,24 @@ class ExchangeRateStore
     end
 
     fetched_at = hub_rates.values.map(&:fetched_at).max
-    materialize_derived_rates!(rates, fetched_at) unless @base_currency == CurrencyCatalog.hub
+    rates_as_of = hub_rates.values.map(&:rates_as_of).max
+    materialize_derived_rates!(rates, fetched_at:, rates_as_of:) unless @base_currency == CurrencyCatalog.hub
 
     {
       base_currency: @base_currency,
-      rates_as_of: fetched_at&.to_date,
+      rates_as_of: rates_as_of,
       stale: stale,
       rates: rates
     }
   end
 
-  def materialize_derived_rates!(rates, fetched_at)
+  def materialize_derived_rates!(rates, fetched_at:, rates_as_of:)
     rates.each do |quote_currency, rate|
       record = ExchangeRate.find_or_initialize_by(
         base_currency: @base_currency,
         quote_currency: quote_currency
       )
-      record.update!(rate: rate, fetched_at: fetched_at)
+      record.update!(rate: rate, fetched_at: fetched_at, rates_as_of: rates_as_of)
     end
   end
 end

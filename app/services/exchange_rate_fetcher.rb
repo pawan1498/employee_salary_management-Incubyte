@@ -10,10 +10,10 @@ class ExchangeRateFetcher
     fetched_at = Time.current
     hub = CurrencyCatalog.hub
 
-    upsert_rate(hub, hub, BigDecimal("1"), fetched_at)
+    upsert_rate(hub, hub, BigDecimal("1"), fetched_at:, rates_as_of:)
 
     response.fetch("rates").each do |quote_currency, rate|
-      upsert_rate(hub, quote_currency, BigDecimal(rate.to_s), fetched_at)
+      upsert_rate(hub, quote_currency, BigDecimal(rate.to_s), fetched_at:, rates_as_of:)
     end
 
     {
@@ -41,12 +41,12 @@ class ExchangeRateFetcher
     raise UnavailableError
   end
 
-  def upsert_rate(base_currency, quote_currency, rate, fetched_at)
+  def upsert_rate(base_currency, quote_currency, rate, fetched_at:, rates_as_of:)
     record = ExchangeRate.find_or_initialize_by(
       base_currency: base_currency,
       quote_currency: quote_currency.to_s.upcase
     )
-    record.update!(rate: rate, fetched_at: fetched_at)
+    record.update!(rate: rate, fetched_at: fetched_at, rates_as_of: rates_as_of)
   end
 
   def hub_rates_hash

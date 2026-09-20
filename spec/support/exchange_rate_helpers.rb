@@ -15,13 +15,14 @@ module ExchangeRateHelpers
     "JPY" => BigDecimal("149.25")
   }.freeze
 
-  def seed_exchange_rates(rates: DEFAULT_HUB_RATES, fetched_at: Time.current)
+  def seed_exchange_rates(rates: DEFAULT_HUB_RATES, fetched_at: Time.current, rates_as_of: Date.new(2026, 9, 19))
     rates.each do |quote_currency, rate|
       ExchangeRate.create!(
         base_currency: CurrencyCatalog.hub,
         quote_currency: quote_currency,
         rate: rate,
-        fetched_at: fetched_at
+        fetched_at: fetched_at,
+        rates_as_of: rates_as_of
       )
     end
   end
