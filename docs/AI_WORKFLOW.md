@@ -9,7 +9,7 @@ This document explains **how I used agentic AI (Cursor) on this take-home** — 
 | Tool | Role |
 |---|---|
 | **Cursor (Agent mode)** | Primary coding assistant — specs, implementation, refactors, deploy scripts, docs |
-| **Cursor rules** (`.cursor/rules/rails-engineering.mdc`) | Persistent instructions: TDD order, API contract, “Rails first”, no invented scope, CI bar before commit |
+| **Cursor rules** ([CURSOR_RULES.md](CURSOR_RULES.md) · live: `.cursor/rules/rails-engineering.mdc`) | Persistent instructions: TDD order, API contract, “Rails first”, no invented scope, CI bar before commit |
 | **GitHub Actions** | Objective gate — RuboCop, Brakeman, bundler-audit, RSpec on every push |
 
 Frontend work used the same Cursor setup in a **separate repo** (`employee_salary_management-frontend-Incubyte`).
@@ -53,7 +53,7 @@ Concrete areas where AI saved the most time **without** replacing judgment:
 
 ## Rules I gave the AI (summary)
 
-The Cursor rule file encodes non-negotiables. In practice I repeatedly enforced:
+The full instruction set is in [CURSOR_RULES.md](CURSOR_RULES.md) (reviewer copy of `.cursor/rules/rails-engineering.mdc`). In practice I repeatedly enforced:
 
 - **Outside-in TDD** — request spec first; model spec only for domain rules.
 - **No invented requirements** — if unsure, update REQUIREMENTS.md first.
