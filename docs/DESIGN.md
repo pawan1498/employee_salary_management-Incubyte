@@ -103,6 +103,8 @@ Vite + React. See **[FRONTEND.md](FRONTEND.md)** for screens, env, and the JSON 
 
 ## Performance (10k)
 
+See **[PERFORMANCE.md](PERFORMANCE.md)** for measured timings, indexes, and scaling notes. Summary:
+
 - Paginate the list; do not return 10k rows.
 - `includes` / subquery for current salary so the list is not N+1.
 - Insights: `GROUP BY` in the database.
