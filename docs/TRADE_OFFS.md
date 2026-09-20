@@ -50,7 +50,7 @@ Seeding uses **batched inserts** (`EmployeeSeeder`) and is **idempotent** — sa
 | **Reporting currency** | `base_currency` query param (default USD) | Fixed USD only | HR needs one comparable view across countries |
 | **FX source** | Frankfurter (ECB), cached 24h in `exchange_rates` | Real-time payroll FX, manual rates | Free, no API key; good enough for **management reporting**, not payroll |
 | **Rate storage** | USD hub + quote currencies in DB | Fetch on every insights request | Avoids hammering Frankfurter; 503 only when cache is empty and fetch fails |
-| **Currency list** | Single `CurrencyCatalog` | Hard-coded arrays in API and UI | One source of truth for validations, filters, and dropdowns |
+| **Currency list** | Single `CurrencyCatalog` in `app/catalogs/` | Hard-coded arrays in API and UI | One source of truth for validations, filters, and dropdowns; not an ActiveRecord model |
 | **Median** | Computed in SQL after FX conversion | Average only | Median resists outlier skew; HR gets a “typical pay” signal |
 
 **Explicit limitation:** converted totals are **indicative**. I would not use them for payroll, tax, or legal compliance without a different FX policy.
@@ -62,6 +62,7 @@ Seeding uses **batched inserts** (`EmployeeSeeder`) and is **idempotent** — sa
 | **Controllers** | Thin — params, scope, render JSON | Fat controllers with SQL | Readable HTTP layer; behaviour is testable via request specs |
 | **Service objects** | Only where justified: `CompensationInsights`, `ExchangeRateStore`, `EmployeeSeeder` | Service per table | Avoid enterprise theatre; extract when complexity is real |
 | **Query object** | `CurrentSalaryRecordsQuery` only | None, or many query objects | Window-function SQL was too large to duplicate in controller and insights |
+| **Reference data** | `CurrencyCatalog`, `EmployeeCatalog` in `app/catalogs/` | Same classes in `app/models/` | Keeps `app/models/` for database-backed domain only (`Employee`, `SalaryRecord`, `ExchangeRate`) |
 | **Serializers / Grape / JSON:API** | Private controller helpers | Heavy serialization gems | Small API surface; duplication not painful enough yet |
 
 ## Testing
@@ -69,7 +70,8 @@ Seeding uses **batched inserts** (`EmployeeSeeder`) and is **idempotent** — sa
 | Decision | Chosen | Alternative considered | Why |
 |---|---|---|---|
 | **Primary tests** | Request specs (HTTP contract) | Controller specs | End-to-end through routing, params, and DB |
-| **Model specs** | Validations, current salary selection, catalog rules | Test every accessor | Domain invariants worth unit isolation |
+| **Model specs** | Validations, current salary selection | Test every accessor | Domain invariants worth unit isolation |
+| **Catalog specs** | `spec/catalogs/` for reference-data rules | Fold into request specs only | Catalog invariants (country→currency, filter lists) stay fast and isolated |
 | **HTTP stubbing** | WebMock for Frankfurter | VCR cassettes | Deterministic FX tests without recorded fixture drift |
 | **Factories** | Minimal helpers in specs | FactoryBot everywhere | Small domain; explicit `create!` helpers stay readable |
 

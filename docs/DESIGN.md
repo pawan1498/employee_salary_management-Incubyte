@@ -64,7 +64,7 @@ Current salary = the row with the latest `effective_date` for that employee; if 
 | rate | decimal, > 0 — units of quote per 1 base |
 | fetched_at | when Frankfurter was last fetched for this base |
 
-All currency codes live in `CurrencyCatalog` (single Frankfurter-aligned `currencies` list, default `USD`, Frankfurter URL). Salary records, insights `base_currency`, and UI dropdowns all use the same list. React persists the HR Manager’s last choice in `localStorage`. Rates are cached from Frankfurter (ECB) via a USD hub and refreshed lazily every 24 hours.
+All currency codes live in `app/catalogs/currency_catalog.rb` (`CurrencyCatalog` — single Frankfurter-aligned `currencies` list, default `USD`, Frankfurter URL). Salary records, insights `base_currency`, and UI dropdowns all use the same list. React persists the HR Manager’s last choice in `localStorage`. Rates are cached from Frankfurter (ECB) via a USD hub and refreshed lazily every 24 hours.
 
 ## HTTP API (planned)
 

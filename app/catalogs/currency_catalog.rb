@@ -1,4 +1,4 @@
-# Single source of truth for all currency codes and FX configuration in this app.
+# Reference data (not an ActiveRecord model). Single source of truth for currency codes and FX config.
 #
 # - CURRENCIES: Frankfurter-supported ISO codes — used for salary records, insights
 #   base_currency, exchange rates, and every UI currency dropdown

@@ -1,4 +1,4 @@
-# Static country and department values for filters and seed data.
+# Reference data (not an ActiveRecord model). Static country and department values for filters and seed data.
 # Country → currency always comes from CurrencyCatalog (never duplicated here).
 class EmployeeCatalog
   SALARY_RANGES = [
